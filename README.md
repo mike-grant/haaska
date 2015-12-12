@@ -1,8 +1,6 @@
 # haaska: Home Assistant Alexa Skill Adapter
 
-haaska implements a skill adapter to bridge a Home Assistant instance and the
-Alexa Lighting API. In short, this allows you to control lights, switches, and
-scenes exposed by your Home Assistant instance using an Amazon Echo.
+haaska implements a skill adapter to bridge a [Home Assistant](https://home-assistant.io) instance and the Alexa Lighting API. In short, this allows you to control lights, switches, and scenes exposed by your Home Assistant instance using an Amazon Echo.
 
 Examples:
 
