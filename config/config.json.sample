@@ -1,0 +1,4 @@
+{
+    "ha_url": "http://localhost:8123/api",
+    "ha_passwd": "api_password"
+}
