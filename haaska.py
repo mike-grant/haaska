@@ -180,17 +180,14 @@ def handle_adjust_numerical(ha, payload):
         raise AwsLightingError('UNSUPPORTED_TARGET_SETTING', 'Not dimmable')
 
     assert payload['adjustmentUnit'] == 'PERCENTAGE'
-    percentage = payload['adjustmentValue']
+    adjustment = payload['adjustmentValue'] / 100.0 * 255.0
     entity_id = context(payload)['entity_id']
 
-    brightness = 0
-    if payload['adjustmentType'] == 'ABSOLUTE':
-        brightness = percentage / 100.0 * 255.0
-    elif payload['adjustmentType'] == 'RELATIVE':
+    brightness = adjustment
+    if payload['adjustmentType'] == 'RELATIVE':
         state = ha.get('states/' + entity_id)
-        brightness = state['attributes']['brightness']
-        brightness = brightness / 255.0 * 100.0
-        brightness += percentage
+        current_brightness = state['attributes']['brightness']
+        brightness = current_brightness + adjustment
 
     ha.post('services/light/turn_on', data={'entity_id': entity_id,
                                             'brightness': brightness})
