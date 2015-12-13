@@ -176,7 +176,7 @@ def handle_switch_on_off(ha, payload):
 @handle('AdjustNumericalSettingRequest')
 @control_response('AdjustNumericalSettingResponse')
 def handle_adjust_numerical(ha, payload):
-    if not context(payload)['dimmable']:
+    if context(payload)['dimmable'] == 'false':
         raise AwsLightingError('UNSUPPORTED_TARGET_SETTING', 'Not dimmable')
 
     assert payload['adjustmentUnit'] == 'PERCENTAGE'
