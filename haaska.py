@@ -125,7 +125,7 @@ def discover_appliances(ha):
 
     states = ha.get('states')
     return [mk_appliance(x) for x in states
-            if entity_domain(x) in ['light', 'switch', 'scene']]
+            if entity_domain(x) in ['light', 'switch', 'scene', 'media_player']]
 
 
 class AwsLightingError(Exception):
