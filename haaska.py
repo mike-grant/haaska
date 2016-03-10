@@ -114,9 +114,12 @@ def discover_appliances(ha):
         o['manufacturerName'] = 'Unknown'
         o['modelName'] = 'Unknown'
         o['version'] = 'Unknown'
-        o['friendlyName'] = x['attributes']['friendly_name']
-        if entity_domain(x) == 'scene':
-            o['friendlyName'] += ' Scene'
+        if 'haaska_name' in x['attributes']:
+            o['friendlyName'] = x['attributes']['haaska_name']
+        else:
+            o['friendlyName'] = x['attributes']['friendly_name']
+            if entity_domain(x) == 'scene':
+                o['friendlyName'] += ' Scene'
         o['friendlyDescription'] = o['friendlyName']
         o['isReachable'] = True
         o['additionalApplianceDetails'] = {'entity_id': x['entity_id'],
