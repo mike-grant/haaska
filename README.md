@@ -30,3 +30,13 @@ Lighting skill adapters must run on AWS Lambda, and the initial setup is unfortu
     }
   }
   ```
+
+## Customization
+
+Sometimes the "friendly name" of an entity in Home Assistant differs from what you'd actually like to call that entity when talking to Alexa. haaska provides a mechanism to define a custom name for an entity that will be used via Alexa. This is achieved by adding your entity to a [customize](https://home-assistant.io/getting-started/devices/) block in your `configuration.yaml`, and setting the `haaska_name` key to the desired name.
+
+```
+customize:
+  light.some_long_light_name:
+    haaska_name: Overhead
+```
