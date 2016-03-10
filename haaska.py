@@ -180,7 +180,7 @@ def handle_adjust_numerical(ha, payload):
         raise AwsLightingError('UNSUPPORTED_TARGET_SETTING', 'Not dimmable')
 
     assert payload['adjustmentUnit'] == 'PERCENTAGE'
-    adjustment = payload['adjustmentValue'] / 100.0 * 255.0
+    adjustment = round(payload['adjustmentValue'] / 100.0 * 255.0)
     entity_id = context(payload)['entity_id']
 
     brightness = adjustment
