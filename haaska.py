@@ -106,6 +106,9 @@ def discover_appliances(ha):
     def entity_domain(x):
         return x['entity_id'].split('.', 1)[0]
 
+    def is_supported_entity(x):
+        return entity_domain(x) in ['light', 'switch', 'scene', 'media_player']
+
     def mk_appliance(x):
         dimmable = 'brightness' in x['attributes']
         o = {}
@@ -127,8 +130,7 @@ def discover_appliances(ha):
         return o
 
     states = ha.get('states')
-    return [mk_appliance(x) for x in states
-            if entity_domain(x) in ['light', 'switch', 'scene', 'media_player']]
+    return [mk_appliance(x) for x in states if is_supported_entity(x)]
 
 
 class AwsLightingError(Exception):
