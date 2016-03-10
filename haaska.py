@@ -189,6 +189,17 @@ def handle_adjust_numerical(ha, payload):
         current_brightness = state['attributes']['brightness']
         brightness = current_brightness + adjustment
 
+        # So this looks weird, but the relative adjustments seem to always be
+        # +/- 25%, which means depending on the current brightness we could
+        # over-/undershoot the acceptable range. Instead, if we're not
+        # currently saturated, clamp the desired brightness to the allowed
+        # brightness.
+        if current_brightness != 255 and current_brightness != 0:
+            if brightness < 0:
+                brightness = 0
+            elif brightness > 255:
+                brightness = 255
+
     if brightness > 255 or brightness < 0:
         raise AwsLightingError('TARGET_SETTING_OUT_OF_RANGE', str(brightness))
 
