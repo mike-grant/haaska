@@ -40,3 +40,10 @@ customize:
   light.some_long_light_name:
     haaska_name: Overhead
 ```
+If there's an entity you'd like to hide from haaska, you can do that by adding a `haaska_hidden` tag and setting it to `true`; e.g.:
+
+```
+customize:
+  switch.a_switch
+    haaska_hidden: true
+```
