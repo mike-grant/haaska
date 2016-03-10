@@ -114,7 +114,7 @@ def discover_appliances(ha):
         return 'haaska_hidden' in attr and attr['haaska_hidden']
 
     def mk_appliance(x):
-        dimmable = 'brightness' in x['attributes']
+        dimmable = entity_domain(x) == 'light'
         o = {}
         # this needs to be unique and has limitations on allowed characters:
         o['applianceId'] = sha1(x['entity_id']).hexdigest()
