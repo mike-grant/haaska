@@ -189,5 +189,8 @@ def handle_adjust_numerical(ha, payload):
         current_brightness = state['attributes']['brightness']
         brightness = current_brightness + adjustment
 
+    if brightness > 255 or brightness < 0:
+        raise AwsLightingError('TARGET_SETTING_OUT_OF_RANGE', str(brightness))
+
     ha.post('services/light/turn_on', data={'entity_id': entity_id,
                                             'brightness': brightness})
