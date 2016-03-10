@@ -109,6 +109,10 @@ def discover_appliances(ha):
     def is_supported_entity(x):
         return entity_domain(x) in ['light', 'switch', 'scene', 'media_player']
 
+    def is_skipped_entity(x):
+        attr = x['attributes']
+        return 'haaska_hidden' in attr and attr['haaska_hidden']
+
     def mk_appliance(x):
         dimmable = 'brightness' in x['attributes']
         o = {}
@@ -130,7 +134,8 @@ def discover_appliances(ha):
         return o
 
     states = ha.get('states')
-    return [mk_appliance(x) for x in states if is_supported_entity(x)]
+    return [mk_appliance(x) for x in states if is_supported_entity(x) and not
+            is_skipped_entity(x)]
 
 
 class AwsLightingError(Exception):
