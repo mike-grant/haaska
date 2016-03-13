@@ -45,6 +45,6 @@ If there's an entity you'd like to hide from haaska, you can do that by adding a
 
 ```yaml
 customize:
-  switch.a_switch
+  switch.a_switch:
     haaska_hidden: true
 ```
