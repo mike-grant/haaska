@@ -18,7 +18,7 @@ Lighting skill adapters must run on AWS Lambda, and the initial setup is unfortu
 4. Run `make` to generate `build.zip`, which you can then manually upload to AWS Lambda. Alternatively, if you have the AWS CLI configured correctly, run `make deploy` to deploy to AWS Lambda.
 5. Send a test event in AWS with:
 
-  ```
+  ```json
   {
     "header": {
       "payloadVersion": "1",
@@ -36,14 +36,14 @@ Or, if you have the AWS CLI and [jq](https://stedolan.github.io/jq/) installed, 
 
 Sometimes the "friendly name" of an entity in Home Assistant differs from what you'd actually like to call that entity when talking to Alexa. haaska provides a mechanism to define a custom name for an entity that will be used via Alexa. This is achieved by adding your entity to a [customize](https://home-assistant.io/getting-started/devices/) block in your `configuration.yaml`, and setting the `haaska_name` key to the desired name.
 
-```
+```yaml
 customize:
   light.some_long_light_name:
     haaska_name: Overhead
 ```
 If there's an entity you'd like to hide from haaska, you can do that by adding a `haaska_hidden` tag and setting it to `true`; e.g.:
 
-```
+```yaml
 customize:
   switch.a_switch
     haaska_hidden: true
