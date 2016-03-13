@@ -30,6 +30,7 @@ Lighting skill adapters must run on AWS Lambda, and the initial setup is unfortu
     }
   }
   ```
+Or, if you have the AWS CLI and [jq](https://stedolan.github.io/jq/) installed, you can run `make test`, which will validate that haaska can communicate with your Home Assistant instance.
 
 ## Customization
 
