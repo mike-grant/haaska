@@ -175,9 +175,11 @@ def context(payload):
 @handle('SwitchOnOffRequest')
 @control_response('SwitchOnOffResponse')
 def handle_switch_on_off(ha, payload):
-    data = {'entity_id': context(payload)['entity_id']}
+    entity_id = context(payload)['entity_id']
+    data = {'entity_id': entity_id}
+    entity_domain = entity_id.split('.', 1)[0]
 
-    if payload['switchControlAction'] == 'TURN_ON':
+    if payload['switchControlAction'] == 'TURN_ON' or entity_domain == 'scene':
         ha.post('services/homeassistant/turn_on', data=data)
     else:
         ha.post('services/homeassistant/turn_off', data=data)
