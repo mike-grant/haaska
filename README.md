@@ -10,7 +10,7 @@ Examples:
 
 ## Setup
 
-Lighting skill adapters must run on AWS Lambda, and the initial setup is unfortunately a manual process. 
+Lighting skill adapters must run on AWS Lambda, and the initial setup is unfortunately a manual process. @jbags81 wrote a [tutorial](http://www.patchedsoul.com/blog/how-to-setup-haaska/) that more thoroughly documents the setup process.
 
 1. Create an AWS Lambda function using [these instructions](https://developer.amazon.com/public/binaries/content/assets/html/alexa-lighting-api.html#creating-a-lambda-function). Name the function `ha-bridge` and specify the handler as `haaska.event_handler`.
 2. Follow the rest of the [Lighting API provisioning steps](https://developer.amazon.com/public/binaries/content/assets/html/alexa-lighting-api.html#what-you-need-to-do-return). Note that the Lighting Skill API requires the use of OAuth; you can use [Login with Amazon](http://login.amazon.com) for this purpose; haaska does not currently perform any authentication.
