@@ -21,8 +21,10 @@
 # SOFTWARE.
 
 import json
+import operator
 import requests
 from hashlib import sha1
+from uuid import uuid4
 
 handlers = {}
 
@@ -72,12 +74,23 @@ class HomeAssistant(object):
         return r
 
 
+def driver_internal_error():
+    r = {}
+    r['header'] = {'namespace': 'Alexa.ConnectedHome.Control',
+                   'name': 'DriverInternalError',
+                   'payloadVersion': '2',
+                   'messageId': str(uuid4())}
+    r['payload'] = {}
+    return r
+
+
 @handle('HealthCheckRequest')
 def handle_health_check(ha, payload):
     r = {}
-    r['header'] = {'namespace': 'System',
+    r['header'] = {'namespace': 'Alexa.ConnectedHome.System',
+                   'messageId': str(uuid4()),
                    'name': 'HealthCheckResponse',
-                   'payloadVersion': '1'}
+                   'payloadVersion': '2'}
     try:
         ha.get('states')
         r['payload'] = {'isHealthy': True}
@@ -90,14 +103,18 @@ def handle_health_check(ha, payload):
 @handle('DiscoverAppliancesRequest')
 def handle_discover_appliances(ha, payload):
     r = {}
-    r['header'] = {'namespace': 'Discovery',
+    r['header'] = {'namespace': 'Alexa.ConnectedHome.Discovery',
                    'name': 'DiscoverAppliancesResponse',
-                   'payloadVersion': '1'}
+                   'messageId': str(uuid4()),
+                   'payloadVersion': '2'}
     try:
         r['payload'] = {'discoveredAppliances': discover_appliances(ha)}
     except Exception as e:
-        r['payload'] = {'exception': {'code': 'INTERNAL_ERROR',
-                                      'description': str(e)}}
+        print 'Discovery failed: ' + str(e)
+        # v2 documentation is unclear as to what should be returned here if
+        # discovery fails, so in the mean-time, just return 0 devices and log
+        # the error
+        r['payload'] = {'discoveredAppliances': {}}
     finally:
         return r
 
@@ -129,6 +146,10 @@ def discover_appliances(ha):
                 o['friendlyName'] += ' Scene'
         o['friendlyDescription'] = o['friendlyName']
         o['isReachable'] = True
+        o['actions'] = ['turnOn', 'turnOff']
+        if dimmable:
+            o['actions'] += ['incrementPercentage', 'decrementPercentage',
+                             'setPercentage']
         o['additionalApplianceDetails'] = {'entity_id': x['entity_id'],
                                            'dimmable': dimmable}
         return o
@@ -138,32 +159,21 @@ def discover_appliances(ha):
             is_skipped_entity(x)]
 
 
-class AwsLightingError(Exception):
-    def __init__(self, code, description):
-        self.code = code
-        self.description = description
-
-
 def control_response(name):
     def inner(func):
         def response_wrapper(ha, payload):
             r = {}
-            r['header'] = {'namespace': 'Control',
+            r['header'] = {'namespace': 'Alexa.ConnectedHome.Control',
                            'name': name,
-                           'payloadVersion': '1'}
+                           'messageId': str(uuid4()),
+                           'payloadVersion': '2'}
             try:
                 func(ha, payload)
                 r['payload'] = {'success': True}
-            except AwsLightingError as e:
-                r['payload'] = {'success': False,
-                                'exception': {'code': e.code,
-                                              'description': e.description}}
-            except Exception as e:
-                r['payload'] = {'success': False,
-                                'exception': {'code': 'INTERNAL_ERROR',
-                                              'description': str(e)}}
-            finally:
                 return r
+            except Exception as e:
+                print 'operation failed: ' + str(e)
+                return driver_internal_error()
         return response_wrapper
     return inner
 
@@ -172,48 +182,71 @@ def context(payload):
     return payload['appliance']['additionalApplianceDetails']
 
 
-@handle('SwitchOnOffRequest')
-@control_response('SwitchOnOffResponse')
-def handle_switch_on_off(ha, payload):
+@handle('TurnOnRequest')
+@control_response('TurnOnConfirmation')
+def handle_turn_on(ha, payload):
+    entity_id = context(payload)['entity_id']
+    ha.post('services/homeassistant/turn_on', data={'entity_id': entity_id})
+
+
+@handle('TurnOffRequest')
+@control_response('TurnOffConfirmation')
+def handle_turn_off(ha, payload):
     entity_id = context(payload)['entity_id']
     data = {'entity_id': entity_id}
     entity_domain = entity_id.split('.', 1)[0]
 
-    if payload['switchControlAction'] == 'TURN_ON' or entity_domain == 'scene':
+    # Alexa sometimes mishears "turn off" for "turn on"; since it makes no
+    # sense to turn off a scene, just turn it on
+    if entity_domain == 'scene':
         ha.post('services/homeassistant/turn_on', data=data)
     else:
         ha.post('services/homeassistant/turn_off', data=data)
 
 
-@handle('AdjustNumericalSettingRequest')
-@control_response('AdjustNumericalSettingResponse')
-def handle_adjust_numerical(ha, payload):
-    if context(payload)['dimmable'] == 'false':
-        raise AwsLightingError('UNSUPPORTED_TARGET_SETTING', 'Not dimmable')
-
-    assert payload['adjustmentUnit'] == 'PERCENTAGE'
-    adjustment = round(payload['adjustmentValue'] / 100.0 * 255.0)
+@handle('SetPercentageRequest')
+@control_response('SetPercentageConfirmation')
+def handle_set_percentage(ha, payload):
     entity_id = context(payload)['entity_id']
+    brightness = round(payload['percentageState']['value'] / 100.0 * 255.0)
 
-    brightness = adjustment
-    if payload['adjustmentType'] == 'RELATIVE':
-        state = ha.get('states/' + entity_id)
-        current_brightness = state['attributes']['brightness']
-        brightness = current_brightness + adjustment
+    ha.post('services/light/turn_on', data={'entity_id': entity_id,
+                                            'brightness': brightness})
 
-        # So this looks weird, but the relative adjustments seem to always be
-        # +/- 25%, which means depending on the current brightness we could
-        # over-/undershoot the acceptable range. Instead, if we're not
-        # currently saturated, clamp the desired brightness to the allowed
-        # brightness.
-        if current_brightness != 255 and current_brightness != 0:
-            if brightness < 0:
-                brightness = 0
-            elif brightness > 255:
-                brightness = 255
+def handle_percentage_adj(ha, payload, op):
+    entity_id = context(payload)['entity_id']
+    delta = round(payload['deltaPercentage']['value'] / 100.0 * 255.0)
+
+    state = ha.get('states/' + entity_id)
+    current_brightness = state['attributes']['brightness']
+    brightness = op(current_brightness, delta)
+
+    # So this looks weird, but the relative adjustments seem to always be
+    # +/- 25%, which means depending on the current brightness we could
+    # over-/undershoot the acceptable range. Instead, if we're not
+    # currently saturated, clamp the desired brightness to the allowed
+    # brightness.
+    if current_brightness != 255 and current_brightness != 0:
+        if brightness < 0:
+            brightness = 0
+        elif brightness > 255:
+            brightness = 255
 
     if brightness > 255 or brightness < 0:
         raise AwsLightingError('TARGET_SETTING_OUT_OF_RANGE', str(brightness))
 
     ha.post('services/light/turn_on', data={'entity_id': entity_id,
                                             'brightness': brightness})
+
+
+@handle('IncrementPercentageRequest')
+@control_response('IncrementPercentageConfirmation')
+def handle_increment_percentage(ha, payload):
+    handle_percentage_adj(ha, payload, operator.add)
+
+
+@handle('DecrementPercentageRequest')
+@control_response('DecrementPercentageConfirmation')
+def handle_decrement_percentage(ha, payload):
+    handle_percentage_adj(ha, payload, operator.sub)
+
