@@ -2,18 +2,18 @@
 SHELL := /bin/bash
 
 # Function name in AWS Lambda:
-FUNCTION_NAME=ha-bridge
+FUNCTION_NAME=haaska
 
 BUILD_DIR=build
 
-build.zip: haaska.py config/*
+haaska.zip: haaska.py config/*
 	mkdir -p $(BUILD_DIR)
 	cp $^ $(BUILD_DIR)
 	pip install -t $(BUILD_DIR) requests
 	cd $(BUILD_DIR); zip ../$@ -r *
 
 .PHONY: deploy
-deploy: build.zip
+deploy: haaska.zip
 	aws lambda update-function-configuration \
 		--function-name $(FUNCTION_NAME) \
 		--handler haaska.event_handler
@@ -42,5 +42,5 @@ test:
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR) build.zip
+	rm -rf $(BUILD_DIR) haaska.zip
 
