@@ -10,32 +10,31 @@ Examples:
 
 ## Setup
 
-Lighting skill adapters must run on AWS Lambda, and the initial setup is unfortunately a manual process. @jbags81 wrote a [tutorial](http://www.patchedsoul.com/blog/how-to-setup-haaska/) that more thoroughly documents the setup process.
+1. Run `make` to build a deployable package of haaska. This will generate a `haaska.zip` file that you'll upload to AWS Lambda
+2. Register with an OAuth provider, such as Login with Amazon.
+* Note the "Client ID" and "Client Secret", as you'll need those later
+3. Create an Alexa skill and Lambda Function by following [these instructions](https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/steps-to-create-a-smart-home-skill) (with the modifications noted below).
+* The name of the Alexa skill doesn't matter, but I'd suggest "haaska"
+* The name of the Lambda function does matter; use "haaska", otherwise you'll need to modify the `FUNCTION_NAME` variable in the `Makefile`.
+* Select `lambda_basic_execution` for the Lambda role
+* Select "Upload a .ZIP file" for "Code entry type", and upload `haaska.zip` that you created in step 1.
+* For "Handler", enter "haaska.event\_handler"
+* Leave the rest of the defaults alone, and click "Next"
+* Check "Enable event source"
+* Under the "Account Linking" section:
+** Set Authorization URL to: https://www.amazon.com/ap/oa
+** Set the Client ID to the previously noted value from Login with Amazon
+** Set Scope to profile
+** Set Access Token URI to https://api.amazon.com/auth/o2/token
+** Set Client Secret to the previously noted value from Login with Amazon
+** Note the "Redirect URL"
+4. Go back to Login with Amazon and enter the "Redirect URL" as an "Allowed Return URL" for the application you registered.
+5. In the `config/` directory, create a `config.json` file. This file must contain a single object with an `ha_url` key for the API endpoint of your Home Assistant instance, and `ha_passwd` key for the its API password. If you're using HTTPS with a self-signed certificate, put the CA certificate in the `config/` directory and add a `ha_cert` key with the certificate's filename.
+6. Send a test event by running `make test`, which will validate that haaska can communicate with your Home Assistant instance. Note that you must have the AWS CLI and [jq](https://stedolan.github.io/jq/) installed.
 
-1. Create an AWS Lambda function using [these instructions](https://developer.amazon.com/public/binaries/content/assets/html/alexa-lighting-api.html#creating-a-lambda-function). Name the function `ha-bridge` and specify the handler as `haaska.event_handler`.
-2. Follow the rest of the [Lighting API provisioning steps](https://developer.amazon.com/public/binaries/content/assets/html/alexa-lighting-api.html#what-you-need-to-do-return). Note that the Lighting Skill API requires the use of OAuth; you can use [Login with Amazon](http://login.amazon.com) for this purpose; haaska does not currently perform any authentication.
+## Upgrading
 
-   NOTE: Amazon appears to be temporarily rejecting new applications for provisioning:
-
-   > Thanks for your interest in building a skill using the Alexa Smart Home API. We are making this process simpler via a self service development portal for the Alexa Smart Home, at which point you will be able to build, test, and submit your skill for certification. In an effort to avoid rework for you to re-create your skill, we will ask for your patience as we complete this in April.
-
-3. In the `config/` directory, create a `config.json` file. This file must contain a single object with an `ha_url` key for the API endpoint of your Home Assistant instance, and `ha_passwd` key for the its API password. If you're using HTTPS with a self-signed certificate, put the CA certificate in the `config/` directory and add a `ha_cert` key with the certificate's filename.
-4. Run `make` to generate `build.zip`, which you can then manually upload to AWS Lambda. Alternatively, if you have the AWS CLI configured correctly, run `make deploy` to deploy to AWS Lambda.
-5. Send a test event in AWS with:
-
-  ```json
-  {
-    "header": {
-      "payloadVersion": "1",
-      "namespace": "Control",
-      "name": "DiscoverAppliancesRequest"
-    },
-    "payload": {
-        "accessToken": "whatever"
-    }
-  }
-  ```
-Or, if you have the AWS CLI and [jq](https://stedolan.github.io/jq/) installed, you can run `make test`, which will validate that haaska can communicate with your Home Assistant instance.
+To upgrade to a new version, run `make deploy`
 
 ## Customization
 
