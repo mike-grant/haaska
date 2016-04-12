@@ -21,16 +21,16 @@ deploy: build.zip
 		--function-name $(FUNCTION_NAME) \
 		--zip-file fileb://$<
 
-TEST_PAYLOAD:='                  \
-{                                \
-  "header": {                    \
-    "payloadVersion": "1",       \
-    "namespace": "System",       \
-    "name": "HealthCheckRequest" \
-  },                             \
-  "payload": {                   \
-    "accessToken": "..."         \
-  }                              \
+TEST_PAYLOAD:='                                \
+{                                              \
+  "header": {                                  \
+    "payloadVersion": "2",                     \
+    "namespace": "Alexa.ConnectedHome.System", \
+    "name": "HealthCheckRequest"               \
+  },                                           \
+  "payload": {                                 \
+    "accessToken": "..."                       \
+  }                                            \
 }'
 
 .PHONY: test
