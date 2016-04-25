@@ -124,14 +124,14 @@ def discover_appliances(ha):
         return x['entity_id'].split('.', 1)[0]
 
     def is_supported_entity(x):
-        return entity_domain(x) in ['light', 'switch', 'scene', 'media_player']
+        return entity_domain(x) in ['light', 'switch', 'group', 'scene', 'media_player', 'input_boolean']
 
     def is_skipped_entity(x):
         attr = x['attributes']
         return 'haaska_hidden' in attr and attr['haaska_hidden']
 
     def mk_appliance(x):
-        dimmable = entity_domain(x) == 'light'
+        dimmable = entity_domain(x) in ('light', 'group')
         o = {}
         # this needs to be unique and has limitations on allowed characters:
         o['applianceId'] = sha1(x['entity_id']).hexdigest()
@@ -144,6 +144,8 @@ def discover_appliances(ha):
             o['friendlyName'] = x['attributes']['friendly_name']
             if entity_domain(x) == 'scene':
                 o['friendlyName'] += ' Scene'
+            elif entity_domain(x) == 'group':
+                o['friendlyName'] += ' Group'
         o['friendlyDescription'] = o['friendlyName']
         o['isReachable'] = True
         o['actions'] = ['turnOn', 'turnOff']
