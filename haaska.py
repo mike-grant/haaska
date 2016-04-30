@@ -124,7 +124,7 @@ def discover_appliances(ha):
         return x['entity_id'].split('.', 1)[0]
 
     def is_supported_entity(x):
-        return entity_domain(x) in ['light', 'switch', 'group', 'scene', 'media_player', 'input_boolean']
+        return entity_domain(x) in ['light', 'switch', 'group', 'scene', 'media_player', 'input_boolean', 'script']
 
     def is_skipped_entity(x):
         attr = x['attributes']
@@ -146,7 +146,10 @@ def discover_appliances(ha):
                 o['friendlyName'] += ' Scene'
             elif entity_domain(x) == 'group':
                 o['friendlyName'] += ' Group'
-        o['friendlyDescription'] = o['friendlyName']
+        if 'haaska_desc' in x['attributes']:
+            o['friendlyDescription'] = x['attributes']['haaska_desc']
+        else:
+            o['friendlyDescription'] = 'Home Assistant ' + entity_domain(x).replace('_', ' ').title()
         o['isReachable'] = True
         o['actions'] = ['turnOn', 'turnOff']
         if dimmable:
@@ -199,8 +202,8 @@ def handle_turn_off(ha, payload):
     entity_domain = entity_id.split('.', 1)[0]
 
     # Alexa sometimes mishears "turn off" for "turn on"; since it makes no
-    # sense to turn off a scene, just turn it on
-    if entity_domain == 'scene':
+    # sense to turn off a scene or script, just turn it on
+    if entity_domain == 'scene' or entity_domain == 'script':
         ha.post('services/homeassistant/turn_on', data=data)
     else:
         ha.post('services/homeassistant/turn_off', data=data)
@@ -251,4 +254,3 @@ def handle_increment_percentage(ha, payload):
 @control_response('DecrementPercentageConfirmation')
 def handle_decrement_percentage(ha, payload):
     handle_percentage_adj(ha, payload, operator.sub)
-
