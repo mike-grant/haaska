@@ -76,14 +76,21 @@ class HomeAssistant(object):
         return r
 
 
-def driver_internal_error():
-    r = {}
-    r['header'] = {'namespace': 'Alexa.ConnectedHome.Control',
-                   'name': 'DriverInternalError',
-                   'payloadVersion': '2',
-                   'messageId': str(uuid4())}
-    r['payload'] = {}
-    return r
+class SmartHomeException(Exception):
+    def __init__(self, name="DriverInternalError", payload={}):
+        self.r = {}
+        self.r['header'] = {'namespace': 'Alexa.ConnectedHome.Control',
+                            'name': name,
+                            'payloadVersion': '2',
+                            'messageId': str(uuid4())}
+        self.r['payload'] = payload
+
+
+class ValueOutOfRangeError(SmartHomeException):
+    def __init__(self, minValue, maxValue):
+        super(ValueOutOfRangeError, self).__init__('ValueOutOfRangeError',
+                                                   {'minimumValue': minValue,
+                                                    'maximumValue': maxValue})
 
 
 @handle('HealthCheckRequest')
@@ -183,9 +190,11 @@ def control_response(name):
                 func(ha, payload)
                 r['payload'] = {'success': True}
                 return r
+            except SmartHomeException as e:
+                return e.r
             except Exception as e:
                 print 'operation failed: ' + str(e)
-                return driver_internal_error()
+                return SmartHomeException().r
         return response_wrapper
     return inner
 
@@ -258,7 +267,7 @@ def handle_percentage_adj(ha, payload, op):
             brightness = 255
 
     if brightness > 255 or brightness < 0:
-        raise AwsLightingError('TARGET_SETTING_OUT_OF_RANGE', str(brightness))
+        raise ValueOutOfRangeError(0, 100)
 
     ha.post('services/light/turn_on', data={'entity_id': entity_id,
                                             'brightness': brightness})
