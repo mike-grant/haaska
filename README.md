@@ -10,6 +10,8 @@ Examples:
 - "Alexa, turn on evening scene"
 - "Alexa, turn off bedroom light"
 
+[@brusc](https://github.com/brusc) put together a good [video](https://www.youtube.com/watch?v=zZuwQ9spPkQ) which demonstrates haaska in action, and provides a walkthrough of the setup process.
+
 ## Setup
 
 1. Run `make` to build a deployable package of haaska. This will generate a `haaska.zip` file that you'll upload to AWS Lambda
