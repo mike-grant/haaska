@@ -32,6 +32,7 @@ Examples:
         * Set Access Token URI to https://api.amazon.com/auth/o2/token
         * Set Client Secret to the previously noted value from Login with Amazon
         * Note the "Redirect URL"
+    * There are two properly sized Home Assistant logos in the images/ folder which you can upload to Amazon for use with your skill. Upload both on the "Publishing Information" step of the process.
 4. Go back to Login with Amazon and enter the "Redirect URL" as an "Allowed Return URL" for the application you registered.
 5. In the `config/` directory, create a `config.json` file. This file must contain a single object with an `ha_url` key for the API endpoint of your Home Assistant instance, and `ha_passwd` key for the its API password. If you're using HTTPS with a self-signed certificate, put the CA certificate in the `config/` directory and add a `ha_cert` key with the certificate's filename.
 6. Send a test event by running `make test`, which will validate that haaska can communicate with your Home Assistant instance. Note that you must have the AWS CLI and [jq](https://stedolan.github.io/jq/) installed.
