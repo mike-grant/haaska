@@ -28,7 +28,6 @@ from uuid import uuid4
 
 handlers = {}
 
-
 def get_config():
     with open('config.json') as f:
         cfg = json.load(f)
@@ -36,9 +35,9 @@ def get_config():
             cfg['ha_cert'] = False
         return cfg
 
+cfg = get_config()
 
 def event_handler(event, context):
-    cfg = get_config()
     ha = HomeAssistant(cfg['ha_url'], cfg['ha_passwd'], cfg['ha_cert'])
 
     name = event['header']['name']
@@ -125,9 +124,8 @@ def discover_appliances(ha):
 
     def is_supported_entity(x):
         allowed_entities = ['group', 'input_boolean', 'light', 'media_player', 'scene', 'script', 'switch']
-        cfg = get_config()
         if 'ha_allowed_entities' in cfg:
-          allowed_entities = cfg['ha_allowed_entities']
+            allowed_entities = cfg['ha_allowed_entities']
         return entity_domain(x) in allowed_entities
 
     def is_skipped_entity(x):
