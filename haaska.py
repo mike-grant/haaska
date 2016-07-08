@@ -124,7 +124,7 @@ def discover_appliances(ha):
         return x['entity_id'].split('.', 1)[0]
 
     def is_supported_entity(x):
-        return entity_domain(x) in ['light', 'switch', 'group', 'scene', 'media_player', 'input_boolean', 'script']
+        return entity_domain(x) in ['light', 'switch', 'group', 'scene', 'media_player', 'input_boolean', 'script', 'garage_door']
 
     def is_skipped_entity(x):
         attr = x['attributes']
@@ -191,7 +191,13 @@ def context(payload):
 @control_response('TurnOnConfirmation')
 def handle_turn_on(ha, payload):
     entity_id = context(payload)['entity_id']
-    ha.post('services/homeassistant/turn_on', data={'entity_id': entity_id})
+    data = {'entity_id': entity_id}
+    entity_domain = entity_id.split('.', 1)[0]
+
+    if entity_domain == 'garage_door':
+        ha.post('services/garage_door/open', data=data)
+    else:
+        ha.post('services/homeassistant/turn_on', data=data)
 
 
 @handle('TurnOffRequest')
@@ -205,6 +211,8 @@ def handle_turn_off(ha, payload):
     # sense to turn off a scene or script, just turn it on
     if entity_domain == 'scene' or entity_domain == 'script':
         ha.post('services/homeassistant/turn_on', data=data)
+    elif entity_domain == 'garage_door':
+        ha.post('services/garage_door/close', data=data)
     else:
         ha.post('services/homeassistant/turn_off', data=data)
 
