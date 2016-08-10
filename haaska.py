@@ -196,7 +196,7 @@ def handle_turn_on(ha, payload):
 
     if entity_domain == 'garage_door':
         ha.post('services/garage_door/open', data=data)
-    if entity_domain == 'lock':
+    elif entity_domain == 'lock':
         ha.post('services/lock/lock', data=data)
     else:
         ha.post('services/homeassistant/turn_on', data=data)
