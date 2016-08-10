@@ -124,7 +124,7 @@ def discover_appliances(ha):
         return x['entity_id'].split('.', 1)[0]
 
     def is_supported_entity(x):
-        return entity_domain(x) in ['light', 'switch', 'group', 'scene', 'media_player', 'input_boolean', 'script', 'garage_door']
+        return entity_domain(x) in ['light', 'switch', 'group', 'scene', 'media_player', 'input_boolean', 'script', 'garage_door', 'lock']
 
     def is_skipped_entity(x):
         attr = x['attributes']
@@ -196,6 +196,8 @@ def handle_turn_on(ha, payload):
 
     if entity_domain == 'garage_door':
         ha.post('services/garage_door/open', data=data)
+    if entity_domain == 'lock':
+        ha.post('services/lock/lock', data=data)
     else:
         ha.post('services/homeassistant/turn_on', data=data)
 
@@ -213,6 +215,8 @@ def handle_turn_off(ha, payload):
         ha.post('services/homeassistant/turn_on', data=data)
     elif entity_domain == 'garage_door':
         ha.post('services/garage_door/close', data=data)
+    elif entity_domain == 'lock':
+        ha.post('services/lock/unlock', data=data)
     else:
         ha.post('services/homeassistant/turn_off', data=data)
 
