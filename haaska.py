@@ -28,6 +28,7 @@ from uuid import uuid4
 
 handlers = {}
 
+
 def get_config():
     with open('config.json') as f:
         cfg = json.load(f)
@@ -35,7 +36,9 @@ def get_config():
             cfg['ha_cert'] = False
         return cfg
 
+
 cfg = get_config()
+
 
 def event_handler(event, context):
     ha = HomeAssistant(cfg['ha_url'], cfg['ha_passwd'], cfg['ha_cert'])
@@ -231,6 +234,7 @@ def handle_set_percentage(ha, payload):
 
     ha.post('services/light/turn_on', data={'entity_id': entity_id,
                                             'brightness': brightness})
+
 
 def handle_percentage_adj(ha, payload, op):
     entity_id = context(payload)['entity_id']
