@@ -126,7 +126,8 @@ def discover_appliances(ha):
         return x['entity_id'].split('.', 1)[0]
 
     def is_supported_entity(x):
-        allowed_entities = ['group', 'input_boolean', 'light', 'media_player', 'scene', 'script', 'switch', 'garage_door', 'lock']
+        allowed_entities = ['group', 'input_boolean', 'light', 'media_player',
+                            'scene', 'script', 'switch', 'garage_door', 'lock']
         if 'ha_allowed_entities' in cfg:
             allowed_entities = cfg['ha_allowed_entities']
         return entity_domain(x) in allowed_entities
@@ -154,7 +155,8 @@ def discover_appliances(ha):
         if 'haaska_desc' in x['attributes']:
             o['friendlyDescription'] = x['attributes']['haaska_desc']
         else:
-            o['friendlyDescription'] = 'Home Assistant ' + entity_domain(x).replace('_', ' ').title()
+            o['friendlyDescription'] = 'Home Assistant ' + \
+                entity_domain(x).replace('_', ' ').title()
         o['isReachable'] = True
         o['actions'] = ['turnOn', 'turnOff']
         if dimmable:
