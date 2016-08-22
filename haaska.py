@@ -144,7 +144,7 @@ def discover_appliances(ha):
         return 'haaska_hidden' in attr and attr['haaska_hidden']
 
     def mk_appliance(x):
-        dimmable = entity_domain(x) in ('light', 'group')
+        dimmable = entity_domain(x) in ('light', 'group', 'media_player')
         o = {}
         # this needs to be unique and has limitations on allowed characters:
         o['applianceId'] = sha1(x['entity_id']).hexdigest()
@@ -310,6 +310,17 @@ class LightEntity(Entity):
         self._call_service('light/turn_on', {'brightness': brightness})
 
 
+class MediaPlayerEntity(Entity):
+    def get_percentage(self):
+        state = self.ha.get('states/' + self.entity_id)
+        vol = state['attributes']['volume_level']
+        return vol * 100.0
+
+    def set_percentage(self, val):
+        vol = val / 100.0
+        self._call_service('media_player/volume_set', {'volume_level': vol})
+
+
 def mk_entity(ha, payload):
     entity_id = context(payload)['entity_id']
     entity_domain = entity_id.split('.', 1)[0]
@@ -318,6 +329,7 @@ def mk_entity(ha, payload):
                'lock': LockEntity,
                'script': ScriptEntity,
                'scene': SceneEntity,
-               'light': LightEntity}
+               'light': LightEntity,
+               'media_player': MediaPlayerEntity}
 
     return domains.setdefault(entity_domain, Entity)(ha, entity_id)
