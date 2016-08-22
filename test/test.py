@@ -159,6 +159,20 @@ def test_set_light_percentage():
             assert get_brightness(ap) == v
 
 
+def test_set_volume():
+    for ap in appliances:
+        if 'setPercentage' not in ap['actions']:
+            continue
+        if entity_domain(ap) != 'media_player':
+            continue
+        if (int(get_state(ap)['attributes']['supported_media_commands'])) & 4 == 0:
+            continue
+        for v in [10, 50, 75, 100]:
+            resp = set_percentage(ap, v)
+            assert resp['header']['name'] == 'SetPercentageConfirmation'
+            assert (get_state(ap)['attributes']['volume_level'] * 100.0) == v
+
+
 def dim_light(ap, val):
     req = {
         "header": {
