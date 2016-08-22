@@ -206,71 +206,43 @@ def context(payload):
 @handle('TurnOnRequest')
 @control_response('TurnOnConfirmation')
 def handle_turn_on(ha, payload):
-    entity_id = context(payload)['entity_id']
-    data = {'entity_id': entity_id}
-    entity_domain = entity_id.split('.', 1)[0]
-
-    if entity_domain == 'garage_door':
-        ha.post('services/garage_door/open', data=data)
-    elif entity_domain == 'lock':
-        ha.post('services/lock/lock', data=data)
-    else:
-        ha.post('services/homeassistant/turn_on', data=data)
+    e = mk_entity(ha, payload)
+    e.turn_on()
 
 
 @handle('TurnOffRequest')
 @control_response('TurnOffConfirmation')
 def handle_turn_off(ha, payload):
-    entity_id = context(payload)['entity_id']
-    data = {'entity_id': entity_id}
-    entity_domain = entity_id.split('.', 1)[0]
-
-    # Alexa sometimes mishears "turn off" for "turn on"; since it makes no
-    # sense to turn off a scene or script, just turn it on
-    if entity_domain == 'scene' or entity_domain == 'script':
-        ha.post('services/homeassistant/turn_on', data=data)
-    elif entity_domain == 'garage_door':
-        ha.post('services/garage_door/close', data=data)
-    elif entity_domain == 'lock':
-        ha.post('services/lock/unlock', data=data)
-    else:
-        ha.post('services/homeassistant/turn_off', data=data)
-
+    e = mk_entity(ha, payload)
+    e.turn_off()
 
 @handle('SetPercentageRequest')
 @control_response('SetPercentageConfirmation')
 def handle_set_percentage(ha, payload):
-    entity_id = context(payload)['entity_id']
-    brightness = round(payload['percentageState']['value'] / 100.0 * 255.0)
-
-    ha.post('services/light/turn_on', data={'entity_id': entity_id,
-                                            'brightness': brightness})
+    e = mk_entity(ha, payload)
+    e.set_percentage(payload['percentageState']['value'])
 
 
 def handle_percentage_adj(ha, payload, op):
-    entity_id = context(payload)['entity_id']
-    delta = round(payload['deltaPercentage']['value'] / 100.0 * 255.0)
-
-    state = ha.get('states/' + entity_id)
-    current_brightness = state['attributes']['brightness']
-    brightness = op(current_brightness, delta)
+    e = mk_entity(ha, payload)
+    current = e.get_percentage()
+    new = op(current, payload['deltaPercentage']['value'])
 
     # So this looks weird, but the relative adjustments seem to always be
     # +/- 25%, which means depending on the current brightness we could
     # over-/undershoot the acceptable range. Instead, if we're not
     # currently saturated, clamp the desired brightness to the allowed
     # brightness.
-    if current_brightness != 255 and current_brightness != 0:
-        if brightness < 0:
-            brightness = 0
-        elif brightness > 255:
-            brightness = 255
+    if current != 100 and current != 0:
+        if new < 0:
+            new = 0
+        elif new > 100:
+            new = 100
 
-    if brightness > 255 or brightness < 0:
+    if new > 100 or new < 0:
         raise ValueOutOfRangeError(0, 100)
 
-    ha.post('services/light/turn_on', data={'entity_id': entity_id,
-                                            'brightness': brightness})
+    e.set_percentage(new)
 
 
 @handle('IncrementPercentageRequest')
@@ -283,3 +255,69 @@ def handle_increment_percentage(ha, payload):
 @control_response('DecrementPercentageConfirmation')
 def handle_decrement_percentage(ha, payload):
     handle_percentage_adj(ha, payload, operator.sub)
+
+
+class Entity(object):
+    def __init__(self, ha, entity_id):
+        self.ha = ha
+        self.entity_id = entity_id
+
+    def _call_service(self, service, data={}):
+        data['entity_id'] = self.entity_id
+        self.ha.post('services/' + service, data)
+
+    def turn_on(self):
+        self._call_service('homeassistant/turn_on')
+
+    def turn_off(self):
+        self._call_service('homeassistant/turn_off')
+
+
+class GarageDoorEntity(Entity):
+    def turn_on(self):
+        self._call_service('garage_door/open')
+
+    def turn_off(self):
+        self._call_service('garage_door/close')
+
+
+class LockEntity(Entity):
+    def turn_on(self):
+        self._call_service('lock/lock')
+
+    def turn_off(self):
+        self._call_service('lock/unlock')
+
+
+class ScriptEntity(Entity):
+    def turn_off(self):
+        self.turn_on()
+
+
+class SceneEntity(Entity):
+    def turn_off(self):
+        self.turn_on()
+
+
+class LightEntity(Entity):
+    def get_percentage(self):
+        state = self.ha.get('states/' + self.entity_id)
+        current_brightness = state['attributes']['brightness']
+        return (current_brightness / 255.0) * 100.0
+
+    def set_percentage(self, val):
+        brightness = (val / 100.0) * 255.0
+        self._call_service('light/turn_on', {'brightness': brightness})
+
+
+def mk_entity(ha, payload):
+    entity_id = context(payload)['entity_id']
+    entity_domain = entity_id.split('.', 1)[0]
+
+    domains = {'garage_door': GarageDoorEntity,
+               'lock': LockEntity,
+               'script': ScriptEntity,
+               'scene': SceneEntity,
+               'light': LightEntity}
+
+    return domains.setdefault(entity_domain, Entity)(ha, entity_id)
