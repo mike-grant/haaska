@@ -134,7 +134,8 @@ def discover_appliances(ha):
 
     def is_supported_entity(x):
         allowed_entities = ['group', 'input_boolean', 'light', 'media_player',
-                            'scene', 'script', 'switch', 'garage_door', 'lock']
+                            'scene', 'script', 'switch', 'garage_door', 'lock',
+                            'cover']
         if 'ha_allowed_entities' in cfg:
             allowed_entities = cfg['ha_allowed_entities']
         return entity_domain(x) in allowed_entities
@@ -280,6 +281,13 @@ class GarageDoorEntity(Entity):
     def turn_off(self):
         self._call_service('garage_door/close')
 
+class CoverEntity(Entity):
+    def turn_on(self):
+        self._call_service('cover/open_cover')
+
+    def turn_off(self):
+        self._call_service('cover/close_cover')
+
 
 class LockEntity(Entity):
     def turn_on(self):
@@ -326,6 +334,7 @@ def mk_entity(ha, payload):
     entity_domain = entity_id.split('.', 1)[0]
 
     domains = {'garage_door': GarageDoorEntity,
+               'cover': CoverEntity,
                'lock': LockEntity,
                'script': ScriptEntity,
                'scene': SceneEntity,
