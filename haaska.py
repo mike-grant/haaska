@@ -166,7 +166,10 @@ def discover_appliances(ha):
             o['friendlyDescription'] = 'Home Assistant ' + \
                 entity_domain(x).replace('_', ' ').title()
         o['isReachable'] = True
-        o['actions'] = ['turnOn', 'turnOff']
+        if entity_domain(x) == 'lock':
+            o['actions'] = ['getLockState', 'setLockState']
+        else:
+            o['actions'] = ['turnOn', 'turnOff']
         if dimmable:
             o['actions'] += ['incrementPercentage', 'decrementPercentage',
                              'setPercentage']
@@ -188,8 +191,8 @@ def control_response(name):
                            'messageId': str(uuid4()),
                            'payloadVersion': '2'}
             try:
-                func(ha, payload)
-                r['payload'] = {'success': True}
+                response_payload = func(ha, payload) or {'success': True}
+                r['payload'] = response_payload
                 return r
             except SmartHomeException as e:
                 return e.r
@@ -250,13 +253,35 @@ def handle_percentage_adj(ha, payload, op):
 @handle('IncrementPercentageRequest')
 @control_response('IncrementPercentageConfirmation')
 def handle_increment_percentage(ha, payload):
-    handle_percentage_adj(ha, payload, operator.add)
+    return handle_percentage_adj(ha, payload, operator.add)
 
 
 @handle('DecrementPercentageRequest')
 @control_response('DecrementPercentageConfirmation')
 def handle_decrement_percentage(ha, payload):
-    handle_percentage_adj(ha, payload, operator.sub)
+    return handle_percentage_adj(ha, payload, operator.sub)
+
+
+@handle('GetLockStateRequest')
+def handle_get_lock_state(ha, payload):
+    e = mk_entity(ha, payload)
+    lock_state = e.get_state().upper()
+
+    r = {}
+    r['header'] = {'namespace': 'Alexa.ConnectedHome.Query',
+                   'messageId': str(uuid4()),
+                   'name': 'GetLockStateResponse',
+                   'payloadVersion': '2'}
+    r['payload'] = {'lockState': lock_state}
+    return r
+
+
+@handle('SetLockStateRequest')
+@control_response('SetLockStateConfirmation')
+def handle_set_lock_state(ha, payload):
+    e = mk_entity(ha, payload)
+    e.set_state(payload["lockState"])
+    return {'lockState': payload["lockState"]}
 
 
 class Entity(object):
@@ -292,11 +317,16 @@ class CoverEntity(Entity):
 
 
 class LockEntity(Entity):
-    def turn_on(self):
-        self._call_service('lock/lock')
+    def set_state(self, state):
+        if state == "LOCKED":
+            self._call_service('lock/lock')
+        elif state == "UNLOCKED":
+            self._call_service('lock/unlock')
 
-    def turn_off(self):
-        self._call_service('lock/unlock')
+    def get_state(self):
+        state = self.ha.get('states/' + self.entity_id)
+        print(state)
+        return state['state']
 
 
 class ScriptEntity(Entity):

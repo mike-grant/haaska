@@ -9,6 +9,7 @@ haaska implements a skill adapter to bridge a [Home Assistant](https://home-assi
 | Groups         | Yes               | No             |
 | Input Booleans | Yes               | No             |
 | Lights         | Yes               | Yes            |
+| Locks          | Lock/Unlock       | No             |
 | Media Players  | Yes               | Yes (volume)   |
 | Scenes         | Yes               | No             |
 | Scripts        | Yes               | No             |
