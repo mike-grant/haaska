@@ -178,6 +178,71 @@ def test_cover_on_off_on():
     assert_state_is(cover, 'open')
 
 
+def set_lock_state(ap, locked):
+    req = {
+        "header": {
+            "messageId": "01ebf625-0b89-4c4d-b3aa-32340e894688",
+            "name": "SetLockStateRequest",
+            "namespace": "Alexa.ConnectedHome.Control",
+            "payloadVersion": "2"
+        },
+        "payload": {
+            "accessToken": "[OAuth Token here]",
+            "appliance": to_appliance(ap),
+            "lockState": "LOCKED" if locked else "UNLOCKED"
+        }
+    }
+
+    resp = haaska.event_handler(req, None)
+    if resp['header']['name'] != 'SetLockStateConfirmation':
+        raise UnexpectedResponseException
+    return resp
+
+
+def test_lock_unlock():
+    lock = find_appliance('lock.kitchen_door')
+    set_lock_state(lock, True)
+    assert_state_is(lock, 'locked')
+    set_lock_state(lock, False)
+    assert_state_is(lock, 'unlocked')
+    set_lock_state(lock, True)
+    assert_state_is(lock, 'locked')
+
+
+def get_lock_state(ap):
+    req = {
+        "header": {
+            "messageId": "01ebf625-0b89-4c4d-b3aa-32340e894688",
+            "name": "GetLockStateRequest",
+            "namespace": "Alexa.ConnectedHome.Query",
+            "payloadVersion": "2"
+        },
+        "payload": {
+            "accessToken": "[OAuth Token here]",
+            "appliance": to_appliance(ap),
+        }
+    }
+
+    resp = haaska.event_handler(req, None)
+    if resp['header']['name'] != 'GetLockStateResponse':
+        raise UnexpectedResponseException
+    return resp
+
+
+def test_get_lock_state():
+    lock = find_appliance('lock.kitchen_door')
+
+    set_lock_state(lock, True)
+    assert_state_is(lock, 'locked')
+    r = get_lock_state(lock)
+    assert r['payload']['lockState'] == 'LOCKED'
+
+    set_lock_state(lock, False)
+    assert_state_is(lock, 'unlocked')
+    r = get_lock_state(lock)
+    assert r['payload']['lockState'] == 'UNLOCKED'
+
+
 def test_turn_off():
     for ap in appliances:
         if 'turnOff' not in ap['actions']:
