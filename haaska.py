@@ -293,6 +293,8 @@ class Entity(object):
         data['entity_id'] = self.entity_id
         self.ha.post('services/' + service, data)
 
+
+class ToggleEntity(Entity):
     def turn_on(self):
         self._call_service('homeassistant/turn_on')
 
@@ -300,7 +302,7 @@ class Entity(object):
         self._call_service('homeassistant/turn_off')
 
 
-class GarageDoorEntity(Entity):
+class GarageDoorEntity(ToggleEntity):
     def turn_on(self):
         self._call_service('garage_door/open')
 
@@ -308,7 +310,7 @@ class GarageDoorEntity(Entity):
         self._call_service('garage_door/close')
 
 
-class CoverEntity(Entity):
+class CoverEntity(ToggleEntity):
     def turn_on(self):
         self._call_service('cover/open_cover')
 
@@ -328,17 +330,17 @@ class LockEntity(Entity):
         return state['state']
 
 
-class ScriptEntity(Entity):
+class ScriptEntity(ToggleEntity):
     def turn_off(self):
         self.turn_on()
 
 
-class SceneEntity(Entity):
+class SceneEntity(ToggleEntity):
     def turn_off(self):
         self.turn_on()
 
 
-class LightEntity(Entity):
+class LightEntity(ToggleEntity):
     def get_percentage(self):
         state = self.ha.get('states/' + self.entity_id)
         current_brightness = state['attributes']['brightness']
@@ -349,7 +351,7 @@ class LightEntity(Entity):
         self._call_service('light/turn_on', {'brightness': brightness})
 
 
-class MediaPlayerEntity(Entity):
+class MediaPlayerEntity(ToggleEntity):
     def get_percentage(self):
         state = self.ha.get('states/' + self.entity_id)
         vol = state['attributes']['volume_level']
@@ -372,4 +374,4 @@ def mk_entity(ha, payload):
                'light': LightEntity,
                'media_player': MediaPlayerEntity}
 
-    return domains.setdefault(entity_domain, Entity)(ha, entity_id)
+    return domains.setdefault(entity_domain, ToggleEntity)(ha, entity_id)
