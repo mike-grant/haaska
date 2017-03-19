@@ -1,0 +1,19 @@
+language: python
+python:
+  - "3.5"
+install:
+  - "pip install flake8"
+  - "pip install requests"
+  - "pip install homeassistant"
+before_script:
+  - "flake8 haaska.py"
+  - "flake8 test"
+  - |
+          hass --demo &
+          HASS_PID=$!
+  - "until curl http://localhost:8123/api/states; do sleep 1; done"
+script:
+  - "cd test && nosetests -s"
+after_script:
+  - "kill -9 $HASS_PID"
+
