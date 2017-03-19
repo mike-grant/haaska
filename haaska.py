@@ -265,7 +265,7 @@ def handle_decrement_percentage(ha, payload):
 @handle('GetLockStateRequest')
 def handle_get_lock_state(ha, payload):
     e = mk_entity(ha, payload)
-    lock_state = e.get_state().upper()
+    lock_state = e.get_lock_state().upper()
 
     r = {}
     r['header'] = {'namespace': 'Alexa.ConnectedHome.Query',
@@ -280,7 +280,7 @@ def handle_get_lock_state(ha, payload):
 @control_response('SetLockStateConfirmation')
 def handle_set_lock_state(ha, payload):
     e = mk_entity(ha, payload)
-    e.set_state(payload["lockState"])
+    e.set_lock_state(payload["lockState"])
     return {'lockState': payload["lockState"]}
 
 
@@ -319,13 +319,13 @@ class CoverEntity(ToggleEntity):
 
 
 class LockEntity(Entity):
-    def set_state(self, state):
+    def set_lock_state(self, state):
         if state == "LOCKED":
             self._call_service('lock/lock')
         elif state == "UNLOCKED":
             self._call_service('lock/unlock')
 
-    def get_state(self):
+    def get_lock_state(self):
         state = self.ha.get('states/' + self.entity_id)
         return state['state']
 
