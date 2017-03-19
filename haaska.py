@@ -119,7 +119,7 @@ def handle_discover_appliances(ha, payload):
     try:
         r['payload'] = {'discoveredAppliances': discover_appliances(ha)}
     except Exception as e:
-        print 'Discovery failed: ' + str(e)
+        print('Discovery failed: ' + str(e))
         # v2 documentation is unclear as to what should be returned here if
         # discovery fails, so in the mean-time, just return 0 devices and log
         # the error
@@ -148,7 +148,7 @@ def discover_appliances(ha):
         entity = mk_entity(ha, x['entity_id'])
         o = {}
         # this needs to be unique and has limitations on allowed characters:
-        o['applianceId'] = sha1(x['entity_id']).hexdigest()
+        o['applianceId'] = sha1(x['entity_id'].encode('utf-8')).hexdigest()
         o['manufacturerName'] = 'Unknown'
         o['modelName'] = 'Unknown'
         o['version'] = 'Unknown'
@@ -190,7 +190,7 @@ def control_response(name):
             except SmartHomeException as e:
                 return e.r
             except Exception as e:
-                print 'operation failed: ' + str(e)
+                print('operation failed: ' + str(e))
                 return SmartHomeException().r
         return response_wrapper
     return inner
