@@ -145,7 +145,7 @@ def discover_appliances(ha):
         return 'haaska_hidden' in attr and attr['haaska_hidden']
 
     def mk_appliance(x):
-        dimmable = entity_domain(x) in ('light', 'group', 'media_player')
+        entity = mk_entity(ha, x['entity_id'])
         o = {}
         # this needs to be unique and has limitations on allowed characters:
         o['applianceId'] = sha1(x['entity_id']).hexdigest()
@@ -166,15 +166,8 @@ def discover_appliances(ha):
             o['friendlyDescription'] = 'Home Assistant ' + \
                 entity_domain(x).replace('_', ' ').title()
         o['isReachable'] = True
-        if entity_domain(x) == 'lock':
-            o['actions'] = ['getLockState', 'setLockState']
-        else:
-            o['actions'] = ['turnOn', 'turnOff']
-        if dimmable:
-            o['actions'] += ['incrementPercentage', 'decrementPercentage',
-                             'setPercentage']
-        o['additionalApplianceDetails'] = {'entity_id': x['entity_id'],
-                                           'dimmable': dimmable}
+        o['actions'] = entity.get_actions()
+        o['additionalApplianceDetails'] = {'entity_id': x['entity_id']}
         return o
 
     states = ha.get('states')
@@ -203,33 +196,33 @@ def control_response(name):
     return inner
 
 
-def context(payload):
-    return payload['appliance']['additionalApplianceDetails']
+def payload_to_entity(payload):
+    return payload['appliance']['additionalApplianceDetails']['entity_id']
 
 
 @handle('TurnOnRequest')
 @control_response('TurnOnConfirmation')
 def handle_turn_on(ha, payload):
-    e = mk_entity(ha, payload)
+    e = mk_entity(ha, payload_to_entity(payload))
     e.turn_on()
 
 
 @handle('TurnOffRequest')
 @control_response('TurnOffConfirmation')
 def handle_turn_off(ha, payload):
-    e = mk_entity(ha, payload)
+    e = mk_entity(ha, payload_to_entity(payload))
     e.turn_off()
 
 
 @handle('SetPercentageRequest')
 @control_response('SetPercentageConfirmation')
 def handle_set_percentage(ha, payload):
-    e = mk_entity(ha, payload)
+    e = mk_entity(ha, payload_to_entity(payload))
     e.set_percentage(payload['percentageState']['value'])
 
 
 def handle_percentage_adj(ha, payload, op):
-    e = mk_entity(ha, payload)
+    e = mk_entity(ha, payload_to_entity(payload))
     current = e.get_percentage()
     new = op(current, payload['deltaPercentage']['value'])
 
@@ -264,7 +257,7 @@ def handle_decrement_percentage(ha, payload):
 
 @handle('GetLockStateRequest')
 def handle_get_lock_state(ha, payload):
-    e = mk_entity(ha, payload)
+    e = mk_entity(ha, payload_to_entity(payload))
     lock_state = e.get_lock_state().upper()
 
     r = {}
@@ -279,7 +272,7 @@ def handle_get_lock_state(ha, payload):
 @handle('SetLockStateRequest')
 @control_response('SetLockStateConfirmation')
 def handle_set_lock_state(ha, payload):
-    e = mk_entity(ha, payload)
+    e = mk_entity(ha, payload_to_entity(payload))
     e.set_lock_state(payload["lockState"])
     return {'lockState': payload["lockState"]}
 
@@ -292,6 +285,27 @@ class Entity(object):
     def _call_service(self, service, data={}):
         data['entity_id'] = self.entity_id
         self.ha.post('services/' + service, data)
+
+    def get_actions(self):
+        actions = []
+
+        if hasattr(self, 'turn_on'):
+            actions.append('turnOn')
+        if hasattr(self, 'turn_off'):
+            actions.append('turnOff')
+
+        if hasattr(self, 'set_percentage'):
+            actions.append('setPercentage')
+        if hasattr(self, 'get_percentage'):
+            actions.append('incrementPercentage')
+            actions.append('decrementPercentage')
+
+        if hasattr(self, 'get_lock_state'):
+            actions.append('getLockState')
+        if hasattr(self, 'set_lock_state'):
+            actions.append('setLockState')
+
+        return actions
 
 
 class ToggleEntity(Entity):
@@ -362,8 +376,7 @@ class MediaPlayerEntity(ToggleEntity):
         self._call_service('media_player/volume_set', {'volume_level': vol})
 
 
-def mk_entity(ha, payload):
-    entity_id = context(payload)['entity_id']
+def mk_entity(ha, entity_id):
     entity_domain = entity_id.split('.', 1)[0]
 
     domains = {'garage_door': GarageDoorEntity,
