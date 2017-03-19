@@ -4,8 +4,9 @@
 # $ hass --demo
 
 import sys
+from nose.tools import assert_raises
 sys.path.insert(0, '..')
-import haaska
+import haaska  # noqa: E402
 
 
 def discover_appliance_request():
@@ -21,6 +22,7 @@ def discover_appliance_request():
         }
     }
 
+
 discovery = haaska.event_handler(discover_appliance_request(), None)
 appliances = discovery['payload']['discoveredAppliances']
 
@@ -34,11 +36,13 @@ def test_reachable():
     for ap in appliances:
         assert ap['isReachable']
 
+
 def find_appliance(entity_id):
     for ap in appliances:
         if ap['additionalApplianceDetails']['entity_id'] == entity_id:
             return ap
     return None
+
 
 def get_state(ap):
     entity_id = ap['additionalApplianceDetails']['entity_id']
@@ -57,6 +61,10 @@ def to_appliance(ap):
             "applianceId": ap['applianceId']}
 
 
+class UnexpectedResponseException(Exception):
+    pass
+
+
 def turn_off(ap):
     req = {
         "header": {
@@ -71,6 +79,8 @@ def turn_off(ap):
         }
     }
     resp = haaska.event_handler(req, None)
+    if resp['header']['name'] != 'TurnOffConfirmation':
+        raise UnexpectedResponseException
     return resp
 
 
@@ -88,6 +98,8 @@ def turn_on(ap):
         }
     }
     resp = haaska.event_handler(req, None)
+    if resp['header']['name'] != 'TurnOnConfirmation':
+        raise UnexpectedResponseException
     return resp
 
 
@@ -140,6 +152,7 @@ def test_input_boolean_on_off_on():
     turn_on(ib)
     assert_state_is(ib, 'on')
 
+
 def test_media_player_on_off_on():
     player = find_appliance('media_player.bedroom')
     assert_state_is(player, 'playing')
@@ -149,9 +162,21 @@ def test_media_player_on_off_on():
     assert_state_is(player, 'playing')
 
 
-def test_lock_on_off_on():
+def test_lock_off_on_fails():
     lock = find_appliance('lock.kitchen_door')
-    turn_off(lock)
+    assert_raises(UnexpectedResponseException, turn_off, lock)
+    assert_raises(UnexpectedResponseException, turn_on, lock)
+
+
+def test_cover_on_off_on():
+    cover = find_appliance('cover.garage_door')
+    turn_on(cover)
+    assert_state_is(cover, 'open')
+    turn_off(cover)
+    assert_state_is(cover, 'closed')
+    turn_on(cover)
+    assert_state_is(cover, 'open')
+
 
 def test_turn_off():
     for ap in appliances:
@@ -160,7 +185,8 @@ def test_turn_off():
         resp = turn_off(ap)
         assert resp['header']['name'] == 'TurnOffConfirmation'
         assert resp['payload']['success']
-        if entity_domain(ap) == 'light' or entity_domain(ap) == 'input_boolean':
+        if entity_domain(ap) == 'light' or \
+                entity_domain(ap) == 'input_boolean':
             assert get_state(ap)['state'] == 'off'
         elif entity_domain(ap) == 'media_player':
             assert get_state(ap)['state'] == 'off'
@@ -169,6 +195,7 @@ def test_turn_off():
         elif entity_domain(ap) == 'lock':
             assert get_state(ap)['state'] == 'unlocked'
 
+
 def test_turn_on():
     for ap in appliances:
         if 'turnOn' not in ap['actions']:
@@ -176,7 +203,8 @@ def test_turn_on():
         resp = turn_on(ap)
         assert resp['header']['name'] == 'TurnOnConfirmation'
         assert resp['payload']['success']
-        if entity_domain(ap) == 'light' or entity_domain(ap) == 'input_boolean':
+        if entity_domain(ap) == 'light' or \
+                entity_domain(ap) == 'input_boolean':
             assert get_state(ap)['state'] == 'on'
         elif entity_domain(ap) == 'media_player':
             assert get_state(ap)['state'] == 'playing'
