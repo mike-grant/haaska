@@ -325,7 +325,6 @@ class LockEntity(Entity):
 
     def get_state(self):
         state = self.ha.get('states/' + self.entity_id)
-        print(state)
         return state['state']
 
 
