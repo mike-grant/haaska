@@ -217,6 +217,7 @@ def handle_turn_off(ha, payload):
     e = mk_entity(ha, payload)
     e.turn_off()
 
+
 @handle('SetPercentageRequest')
 @control_response('SetPercentageConfirmation')
 def handle_set_percentage(ha, payload):
@@ -280,6 +281,7 @@ class GarageDoorEntity(Entity):
 
     def turn_off(self):
         self._call_service('garage_door/close')
+
 
 class CoverEntity(Entity):
     def turn_on(self):
