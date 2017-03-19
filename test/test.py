@@ -34,6 +34,11 @@ def test_reachable():
     for ap in appliances:
         assert ap['isReachable']
 
+def find_appliance(entity_id):
+    for ap in appliances:
+        if ap['additionalApplianceDetails']['entity_id'] == entity_id:
+            return ap
+    return None
 
 def get_state(ap):
     entity_id = ap['additionalApplianceDetails']['entity_id']
@@ -65,8 +70,88 @@ def turn_off(ap):
             "appliance": to_appliance(ap)
         }
     }
-    return haaska.event_handler(req, None)
+    resp = haaska.event_handler(req, None)
+    return resp
 
+
+def turn_on(ap):
+    req = {
+        "header": {
+            "messageId": "01ebf625-0b89-4c4d-b3aa-32340e894688",
+            "name": "TurnOnRequest",
+            "namespace": "Alexa.ConnectedHome.Control",
+            "payloadVersion": "2"
+        },
+        "payload": {
+            "accessToken": "",
+            "appliance": to_appliance(ap)
+        }
+    }
+    resp = haaska.event_handler(req, None)
+    return resp
+
+
+def assert_state_is(ap, state):
+    assert get_state(ap)['state'] == state
+
+
+def test_switch_on_off_on():
+    sw = find_appliance(u'switch.decorative_lights')
+    turn_on(sw)
+    assert_state_is(sw, 'on')
+    turn_off(sw)
+    assert_state_is(sw, 'off')
+    turn_on(sw)
+    assert_state_is(sw, 'on')
+
+
+def test_switch_turn_on_twice():
+    sw = find_appliance(u'switch.decorative_lights')
+    turn_on(sw)
+    assert_state_is(sw, 'on')
+    turn_on(sw)
+    assert_state_is(sw, 'on')
+
+
+def test_switch_turn_off_twice():
+    sw = find_appliance(u'switch.decorative_lights')
+    turn_off(sw)
+    assert_state_is(sw, 'off')
+    turn_off(sw)
+    assert_state_is(sw, 'off')
+
+
+def test_light_on_off_on():
+    light = find_appliance(u'light.bed_light')
+    turn_on(light)
+    assert_state_is(light, 'on')
+    turn_off(light)
+    assert_state_is(light, 'off')
+    turn_on(light)
+    assert_state_is(light, 'on')
+
+
+def test_input_boolean_on_off_on():
+    ib = find_appliance('input_boolean.notify')
+    turn_on(ib)
+    assert_state_is(ib, 'on')
+    turn_off(ib)
+    assert_state_is(ib, 'off')
+    turn_on(ib)
+    assert_state_is(ib, 'on')
+
+def test_media_player_on_off_on():
+    player = find_appliance('media_player.bedroom')
+    assert_state_is(player, 'playing')
+    turn_off(player)
+    assert_state_is(player, 'off')
+    turn_on(player)
+    assert_state_is(player, 'playing')
+
+
+def test_lock_on_off_on():
+    lock = find_appliance('lock.kitchen_door')
+    turn_off(lock)
 
 def test_turn_off():
     for ap in appliances:
@@ -83,23 +168,6 @@ def test_turn_off():
             assert get_state(ap)['state'] == 'closed'
         elif entity_domain(ap) == 'lock':
             assert get_state(ap)['state'] == 'unlocked'
-
-
-def turn_on(ap):
-    req = {
-        "header": {
-            "messageId": "01ebf625-0b89-4c4d-b3aa-32340e894688",
-            "name": "TurnOnRequest",
-            "namespace": "Alexa.ConnectedHome.Control",
-            "payloadVersion": "2"
-        },
-        "payload": {
-            "accessToken": "",
-            "appliance": to_appliance(ap)
-        }
-    }
-    return haaska.event_handler(req, None)
-
 
 def test_turn_on():
     for ap in appliances:
