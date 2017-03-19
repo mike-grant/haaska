@@ -165,7 +165,7 @@ def test_set_volume():
             continue
         if entity_domain(ap) != 'media_player':
             continue
-        if (int(get_state(ap)['attributes']['supported_media_commands'])) & 4 == 0:
+        if (int(get_state(ap)['attributes']['supported_features'])) & 4 == 0:
             continue
         for v in [10, 50, 75, 100]:
             resp = set_percentage(ap, v)
