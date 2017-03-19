@@ -1,6 +1,7 @@
 # haaska: Home Assistant Alexa Skill Adapter
 
 [![Join the chat at https://gitter.im/auchter/haaska](https://badges.gitter.im/auchter/haaska.svg)](https://gitter.im/auchter/haaska?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/auchter/haaska.svg?branch=master)](https://travis-ci.org/auchter/haaska)
 
 haaska implements a skill adapter to bridge a [Home Assistant](https://home-assistant.io) instance and the Alexa Lighting API. Currently, haaska supports the following entity types:
 
