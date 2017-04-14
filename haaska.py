@@ -29,6 +29,11 @@ from uuid import uuid4
 handlers = {}
 
 
+LIGHT_SUPPORT_COLOR_TEMP = 2
+LIGHT_SUPPORT_RGB_COLOR = 16
+LIGHT_SUPPORT_XY_COLOR = 64
+
+
 def get_config():
     with open('config.json') as f:
         cfg = json.load(f)
@@ -145,7 +150,10 @@ def discover_appliances(ha):
         return 'haaska_hidden' in attr and attr['haaska_hidden']
 
     def mk_appliance(x):
-        entity = mk_entity(ha, x['entity_id'])
+        features = 0
+        if 'supported_features' in x['attributes']:
+            features = x['attributes']['supported_features']
+        entity = mk_entity(ha, x['entity_id'], features)
         o = {}
         # this needs to be unique and has limitations on allowed characters:
         o['applianceId'] = sha1(x['entity_id'].encode('utf-8')).hexdigest()
@@ -167,7 +175,8 @@ def discover_appliances(ha):
                 entity_domain(x).replace('_', ' ').title()
         o['isReachable'] = True
         o['actions'] = entity.get_actions()
-        o['additionalApplianceDetails'] = {'entity_id': x['entity_id']}
+        o['additionalApplianceDetails'] = {'entity_id': x['entity_id'],
+                                           'supported_features': features}
         return o
 
     states = ha.get('states')
@@ -200,29 +209,33 @@ def payload_to_entity(payload):
     return payload['appliance']['additionalApplianceDetails']['entity_id']
 
 
+def supported_features(payload):
+    return payload['appliance']['additionalApplianceDetails']['supported_features']
+
+
 @handle('TurnOnRequest')
 @control_response('TurnOnConfirmation')
 def handle_turn_on(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     e.turn_on()
 
 
 @handle('TurnOffRequest')
 @control_response('TurnOffConfirmation')
 def handle_turn_off(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     e.turn_off()
 
 
 @handle('SetPercentageRequest')
 @control_response('SetPercentageConfirmation')
 def handle_set_percentage(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     e.set_percentage(payload['percentageState']['value'])
 
 
 def handle_percentage_adj(ha, payload, op):
-    e = mk_entity(ha, payload_to_entity(payload))
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     current = e.get_percentage()
     new = op(current, payload['deltaPercentage']['value'])
 
@@ -257,7 +270,7 @@ def handle_decrement_percentage(ha, payload):
 
 @handle('GetLockStateRequest')
 def handle_get_lock_state(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     lock_state = e.get_lock_state().upper()
 
     r = {}
@@ -272,15 +285,24 @@ def handle_get_lock_state(ha, payload):
 @handle('SetLockStateRequest')
 @control_response('SetLockStateConfirmation')
 def handle_set_lock_state(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     e.set_lock_state(payload["lockState"])
     return {'lockState': payload["lockState"]}
 
 
+@handle('SetColorTemperatureRequest')
+@control_response('SetColorTemperatureConfirmation')
+def handle_set_color_temperature(ha, payload):
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e.set_color_temperature(payload['colorTemperature']['value'])
+
+
 class Entity(object):
-    def __init__(self, ha, entity_id):
+    def __init__(self, ha, entity_id, supported_features):
         self.ha = ha
         self.entity_id = entity_id
+        self.supported_features = supported_features
+        self.entity_domain = self.entity_id.split('.', 1)[0]
 
     def _call_service(self, service, data={}):
         data['entity_id'] = self.entity_id
@@ -304,6 +326,10 @@ class Entity(object):
             actions.append('getLockState')
         if hasattr(self, 'set_lock_state'):
             actions.append('setLockState')
+
+        if self.entity_domain == "light":
+            if self.supported_features & (LIGHT_SUPPORT_COLOR_TEMP or LIGHT_SUPPORT_RGB_COLOR or LIGHT_SUPPORT_XY_COLOR):
+                actions.append('setColorTemperature')
 
         return actions
 
@@ -364,6 +390,10 @@ class LightEntity(ToggleEntity):
         brightness = (val / 100.0) * 255.0
         self._call_service('light/turn_on', {'brightness': brightness})
 
+    def set_color_temperature(self, val):
+        color_temp = (val / 1000000)
+        self._call_service('light/turn_on', {'color_temp': color_temp})
+
 
 class MediaPlayerEntity(ToggleEntity):
     def get_percentage(self):
@@ -376,7 +406,7 @@ class MediaPlayerEntity(ToggleEntity):
         self._call_service('media_player/volume_set', {'volume_level': vol})
 
 
-def mk_entity(ha, entity_id):
+def mk_entity(ha, entity_id, supported_features):
     entity_domain = entity_id.split('.', 1)[0]
 
     domains = {'garage_door': GarageDoorEntity,
@@ -387,4 +417,5 @@ def mk_entity(ha, entity_id):
                'light': LightEntity,
                'media_player': MediaPlayerEntity}
 
-    return domains.setdefault(entity_domain, ToggleEntity)(ha, entity_id)
+    return domains.setdefault(entity_domain, ToggleEntity)(ha, entity_id,
+                                                           supported_features)
