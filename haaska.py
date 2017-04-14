@@ -23,6 +23,7 @@
 import json
 import operator
 import requests
+import colorsys
 from hashlib import sha1
 from uuid import uuid4
 
@@ -210,7 +211,8 @@ def payload_to_entity(payload):
 
 
 def supported_features(payload):
-    return payload['appliance']['additionalApplianceDetails']['supported_features']
+    details = 'additionalApplianceDetails'
+    return payload['appliance'][details]['supported_features']
 
 
 @handle('TurnOnRequest')
@@ -290,6 +292,14 @@ def handle_set_lock_state(ha, payload):
     return {'lockState': payload["lockState"]}
 
 
+@handle('SetColorRequest')
+@control_response('SetColorConfirmation')
+def handle_set_color(ha, payload):
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e.set_color(payload['color']['hue'], payload['color']['saturation'],
+                payload['color']['brightness'])
+
+
 @handle('SetColorTemperatureRequest')
 @control_response('SetColorTemperatureConfirmation')
 def handle_set_color_temperature(ha, payload):
@@ -328,7 +338,9 @@ class Entity(object):
             actions.append('setLockState')
 
         if self.entity_domain == "light":
-            if self.supported_features & (LIGHT_SUPPORT_COLOR_TEMP or LIGHT_SUPPORT_RGB_COLOR or LIGHT_SUPPORT_XY_COLOR):
+            if self.supported_features & LIGHT_SUPPORT_RGB_COLOR:
+                actions.append('setColorRequest')
+            if self.supported_features & LIGHT_SUPPORT_COLOR_TEMP:
                 actions.append('setColorTemperature')
 
         return actions
@@ -389,6 +401,11 @@ class LightEntity(ToggleEntity):
     def set_percentage(self, val):
         brightness = (val / 100.0) * 255.0
         self._call_service('light/turn_on', {'brightness': brightness})
+
+    def set_color(self, hue, saturation, brightness):
+        red, green, blue = colorsys.hsv_to_rgb(hue, saturation, brightness)
+        rgb = [int(red), int(green), int(blue)]
+        self._call_service('light/turn_on', {'rgb_color': rgb})
 
     def set_color_temperature(self, val):
         color_temp = (val / 1000000)
