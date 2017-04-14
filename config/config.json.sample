@@ -1,5 +1,16 @@
 {
-    "ha_url": "http://localhost:8123/api",
-    "ha_passwd": "api_password",
-    "ha_allowed_entities": ["group", "input_boolean", "light", "lock", "media_player", "scene", "script", "switch"]
+  "url": "http://localhost:8123",
+  "password": "api_password",
+  "allowed_domains": [
+    "cover",
+    "garage_door",
+    "group",
+    "input_boolean",
+    "light",
+    "lock",
+    "media_player",
+    "scene",
+    "script",
+    "switch"
+  ]
 }

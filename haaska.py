@@ -32,16 +32,11 @@ handlers = {}
 def get_config():
     with open('config.json') as f:
         cfg = json.load(f)
-        if 'ha_cert' not in cfg:
-            cfg['ha_cert'] = False
         return cfg
 
 
-cfg = get_config()
-
-
 def event_handler(event, context):
-    ha = HomeAssistant(cfg['ha_url'], cfg['ha_passwd'], cfg['ha_cert'])
+    ha = HomeAssistant(get_config())
 
     name = event['header']['name']
     payload = event['payload']
@@ -57,20 +52,32 @@ def handle(event):
 
 
 class HomeAssistant(object):
-    def __init__(self, url, passwd, cert=False):
-        self.url = url
-        self.headers = {'x-ha-access': passwd,
+    def __init__(self, config={}):
+        self.url = config['url']
+        self.headers = {'x-ha-access': config['password'],
                         'content-type': 'application/json'}
-        self.cert = cert
+
+        self.cert = False
+        if 'certificate' in config:
+            self.cert = config['certificate']
+
+        self.allowed_domains = ['cover', 'garage_door', 'group',
+                                'input_boolean', 'light', 'lock',
+                                'media_player', 'scene', 'script', 'switch']
+        if 'allowed_domains' in config:
+            self.allowed_domains = config['allowed_domains']
+
+    def build_url(self, relurl):
+        return '%s/api/%s' % (self.url, relurl)
 
     def get(self, relurl):
-        r = requests.get(self.url + '/' + relurl, headers=self.headers,
+        r = requests.get(self.build_url(relurl), headers=self.headers,
                          verify=self.cert)
         r.raise_for_status()
         return r.json()
 
     def post(self, relurl, data):
-        r = requests.post(self.url + '/' + relurl, headers=self.headers,
+        r = requests.post(self.build_url(relurl), headers=self.headers,
                           verify=self.cert, data=json.dumps(data))
         r.raise_for_status()
         return r
