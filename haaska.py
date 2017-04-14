@@ -135,7 +135,7 @@ def discover_appliances(ha):
     def is_supported_entity(x):
         allowed_entities = ['group', 'input_boolean', 'light', 'media_player',
                             'scene', 'script', 'switch', 'garage_door', 'lock',
-                            'cover']
+                            'cover', 'fan']
         if 'ha_allowed_entities' in cfg:
             allowed_entities = cfg['ha_allowed_entities']
         return entity_domain(x) in allowed_entities
@@ -376,10 +376,35 @@ class MediaPlayerEntity(ToggleEntity):
         self._call_service('media_player/volume_set', {'volume_level': vol})
 
 
+class FanEntity(ToggleEntity):
+    def get_percentage(self):
+        state = self.ha.get('states/' + self.entity_id)
+        speed = state['attributes']['speed']
+        if speed == "off":
+            return 0
+        elif speed == "low":
+            return 33
+        elif speed == "medium":
+            return 66
+        elif speed == "high":
+            return 100
+
+    def set_percentage(self, val):
+        speed = "off"
+        if val <= 33:
+            speed = "low"
+        elif val <= 66:
+            speed = "medium"
+        elif val <= 100:
+            speed = "high"
+        self._call_service('fan/set_speed', {'speed': speed})
+
+
 def mk_entity(ha, entity_id):
     entity_domain = entity_id.split('.', 1)[0]
 
     domains = {'garage_door': GarageDoorEntity,
+               'fan': FanEntity,
                'cover': CoverEntity,
                'lock': LockEntity,
                'script': ScriptEntity,
