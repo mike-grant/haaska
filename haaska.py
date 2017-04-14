@@ -140,12 +140,7 @@ def discover_appliances(ha):
         return x['entity_id'].split('.', 1)[0]
 
     def is_supported_entity(x):
-        allowed_entities = ['group', 'input_boolean', 'light', 'media_player',
-                            'scene', 'script', 'switch', 'garage_door', 'lock',
-                            'cover']
-        if 'ha_allowed_entities' in cfg:
-            allowed_entities = cfg['ha_allowed_entities']
-        return entity_domain(x) in allowed_entities
+        return entity_domain(x) in ha.allowed_domains
 
     def is_skipped_entity(x):
         attr = x['attributes']
