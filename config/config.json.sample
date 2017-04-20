@@ -11,5 +11,6 @@
         "scene",
         "script",
         "switch"
-    ]
+    ],
+    "suffix_entity_names": false
 }
