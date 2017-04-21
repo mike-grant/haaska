@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+# coding: utf-8
 
 # Copyright (c) 2015 Michael Auchter <a@phire.org>
 #
@@ -135,7 +136,7 @@ def discover_appliances(ha):
     def is_supported_entity(x):
         allowed_entities = ['group', 'input_boolean', 'light', 'media_player',
                             'scene', 'script', 'switch', 'garage_door', 'lock',
-                            'cover']
+                            'cover', 'climate']
         if 'ha_allowed_entities' in cfg:
             allowed_entities = cfg['ha_allowed_entities']
         return entity_domain(x) in allowed_entities
@@ -255,6 +256,103 @@ def handle_decrement_percentage(ha, payload):
     return handle_percentage_adj(ha, payload, operator.sub)
 
 
+def convert_temp(temp, from_unit='°C', to_unit='°C'):
+    if temp is None or from_unit == to_unit:
+        return temp
+    if from_unit == '°C':
+        return temp * 1.8 + 32
+    else:
+        return (temp - 32) / 1.8
+
+
+@handle('GetTemperatureReadingRequest')
+def handle_get_temperature_reading(ha, payload):
+    e = mk_entity(ha, payload_to_entity(payload))
+    temperature = e.get_current_temperature()
+
+    r = {}
+    r['header'] = {'namespace': 'Alexa.ConnectedHome.Query',
+                   'messageId': str(uuid4()),
+                   'name': 'GetTemperatureReadingResponse',
+                   'payloadVersion': '2'}
+    r['payload'] = {'temperatureReading': {'value': temperature}}
+    return r
+
+
+@handle('GetTargetTemperatureRequest')
+def handle_get_target_temperature(ha, payload):
+    e = mk_entity(ha, payload_to_entity(payload))
+    temperature, mode = e.get_temperature()
+
+    r = {}
+    r['header'] = {'namespace': 'Alexa.ConnectedHome.Query',
+                   'messageId': str(uuid4()),
+                   'name': 'GetTargetTemperatureResponse',
+                   'payloadVersion': '2'}
+    r['payload'] = {'targetTemperature': {'value': temperature},
+                    'temperatureMode': {'value': mode}}
+    if mode not in ['AUTO', 'COOL', 'HEAT', 'OFF']:
+        r['payload']['temperatureMode'] = {
+            'value': 'CUSTOM',
+            'friendlyName': mode.replace('_', ' ').title()}
+    return r
+
+
+def handle_temperature_adj(ha, payload, op=None):
+    e = mk_entity(ha, payload_to_entity(payload))
+    state = ha.get('states/' + e.entity_id)
+    unit = state['attributes']['unit_of_measurement']
+    min_temp = convert_temp(state['attributes']['min_temp'], unit)
+    max_temp = convert_temp(state['attributes']['max_temp'], unit)
+
+    temperature, mode = e.get_temperature(state)
+
+    if op is not None and 'deltaTemperature' in payload:
+        new = op(temperature, payload['deltaTemperature']['value'])
+        # Clamp the allowed temperature for relative adjustments
+        if temperature != max_temp and temperature != min_temp:
+            if new < min_temp:
+                new = min_temp
+            elif new > max_temp:
+                new = max_temp
+    else:
+        new = payload['targetTemperature']['value']
+
+    if new > max_temp or new < min_temp:
+        raise ValueOutOfRangeError(min_temp, max_temp)
+
+    # Only 3 allowed values for mode in this response
+    if mode not in ['AUTO', 'COOL', 'HEAT']:
+        current = e.get_current_temperature(state)
+        mode = 'COOL' if current >= new else 'HEAT'
+
+    e.set_temperature(new, mode.lower(), state)
+
+    return {'targetTemperature': {'value': new},
+            'temperatureMode': {'value': mode},
+            'previousState': {
+                'targetTemperature': {'value': temperature},
+                'mode': {'value': mode}}}
+
+
+@handle('SetTargetTemperatureRequest')
+@control_response('SetTargetTemperatureConfirmation')
+def handle_set_target_temperature(ha, payload):
+    return handle_temperature_adj(ha, payload)
+
+
+@handle('IncrementTargetTemperatureRequest')
+@control_response('IncrementTargetTemperatureConfirmation')
+def handle_increment_target_temperature(ha, payload):
+    return handle_temperature_adj(ha, payload, operator.add)
+
+
+@handle('DecrementTargetTemperatureRequest')
+@control_response('DecrementTargetTemperatureConfirmation')
+def handle_decrement_target_temperature(ha, payload):
+    return handle_temperature_adj(ha, payload, operator.sub)
+
+
 @handle('GetLockStateRequest')
 def handle_get_lock_state(ha, payload):
     e = mk_entity(ha, payload_to_entity(payload))
@@ -299,6 +397,15 @@ class Entity(object):
         if hasattr(self, 'get_percentage'):
             actions.append('incrementPercentage')
             actions.append('decrementPercentage')
+
+        if hasattr(self, 'get_current_temperature'):
+            actions.append('getTemperatureReading')
+        if hasattr(self, 'set_temperature'):
+            actions.append('setTargetTemperature')
+        if hasattr(self, 'get_temperature'):
+            actions.append('getTargetTemperature')
+            actions.append('incrementTargetTemperature')
+            actions.append('decrementTargetTemperature')
 
         if hasattr(self, 'get_lock_state'):
             actions.append('getLockState')
@@ -376,6 +483,50 @@ class MediaPlayerEntity(ToggleEntity):
         self._call_service('media_player/volume_set', {'volume_level': vol})
 
 
+class ClimateEntity(Entity):
+    def turn_on(self):
+        state = self.ha.get('states/' + self.entity_id)
+        current = self.get_current_temperature(state)
+        temperature, mode = self.get_temperature(state)
+        if temperature is None:
+            mode = 'auto'
+        else:
+            mode = 'cool' if current >= temperature else 'heat'
+        self._call_service('climate/set_operation_mode',
+                           {'operation_mode': mode})
+
+    def turn_off(self):
+        self._call_service('climate/set_operation_mode',
+                           {'operation_mode': 'off'})
+
+    def get_current_temperature(self, state=None):
+        if not state:
+            state = self.ha.get('states/' + self.entity_id)
+        return convert_temp(
+            state['attributes']['current_temperature'],
+            state['attributes']['unit_of_measurement'])
+
+    def get_temperature(self, state=None):
+        if not state:
+            state = self.ha.get('states/' + self.entity_id)
+        temperature = convert_temp(
+            state['attributes']['temperature'],
+            state['attributes']['unit_of_measurement'])
+        mode = state['state'].replace('idle', 'off').upper()
+        return (temperature, mode)
+
+    def set_temperature(self, val, mode=None, state=None):
+        if not state:
+            state = self.ha.get('states/' + self.entity_id)
+        temperature = convert_temp(
+            val,
+            to_unit=state['attributes']['unit_of_measurement'])
+        data = {'temperature': temperature}
+        if mode:
+            data['operation_mode'] = mode
+        self._call_service('climate/set_temperature', data)
+
+
 def mk_entity(ha, entity_id):
     entity_domain = entity_id.split('.', 1)[0]
 
@@ -385,6 +536,7 @@ def mk_entity(ha, entity_id):
                'script': ScriptEntity,
                'scene': SceneEntity,
                'light': LightEntity,
-               'media_player': MediaPlayerEntity}
+               'media_player': MediaPlayerEntity,
+               'climate': ClimateEntity}
 
     return domains.setdefault(entity_domain, ToggleEntity)(ha, entity_id)
