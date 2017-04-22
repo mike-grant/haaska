@@ -447,7 +447,7 @@ class Entity(object):
 
         if self.entity_domain == "light":
             if self.supported_features & LIGHT_SUPPORT_RGB_COLOR:
-                actions.append('setColorRequest')
+                actions.append('setColor')
             if self.supported_features & LIGHT_SUPPORT_COLOR_TEMP:
                 actions.append('setColorTemperature')
 
