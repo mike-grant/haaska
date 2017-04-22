@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+# coding: utf-8
 
 # Basic tests meant to be run against a demo instance of Home-Assistant
 # $ hass --demo
@@ -161,6 +162,15 @@ def test_media_player_on_off_on():
     assert_state_is(player, 'playing')
 
 
+def test_climate_on_off_on():
+    climate = find_appliance('climate.ecobee')
+    assert_state_is(climate, 'auto')
+    turn_off(climate)
+    assert_state_is(climate, 'off')
+    turn_on(climate)
+    assert_state_is(climate, 'auto')
+
+
 def test_lock_off_on_fails():
     lock = find_appliance('lock.kitchen_door')
     assert_raises(UnexpectedResponseException, turn_off, lock)
@@ -254,6 +264,8 @@ def test_turn_off():
             assert get_state(ap)['state'] == 'off'
         elif entity_domain(ap) == 'media_player':
             assert get_state(ap)['state'] == 'off'
+        elif entity_domain(ap) == 'climate':
+            assert get_state(ap)['state'] == 'off'
         elif entity_domain(ap) == 'garage_door':
             assert get_state(ap)['state'] == 'closed'
         elif entity_domain(ap) == 'lock':
@@ -272,6 +284,8 @@ def test_turn_on():
             assert get_state(ap)['state'] == 'on'
         elif entity_domain(ap) == 'media_player':
             assert get_state(ap)['state'] == 'playing'
+        elif entity_domain(ap) == 'climate':
+            assert get_state(ap)['state'] in ['auto', 'cool', 'heat']
         elif entity_domain(ap) == 'garage_door':
             assert get_state(ap)['state'] == 'open'
         elif entity_domain(ap) == 'lock':
@@ -331,6 +345,125 @@ def test_set_volume():
             resp = set_percentage(ap, v)
             assert resp['header']['name'] == 'SetPercentageConfirmation'
             assert (get_state(ap)['attributes']['volume_level'] * 100.0) == v
+
+
+def convert_temp(temp, from_unit='°C', to_unit='°C'):
+    if temp is None or from_unit == to_unit:
+        return temp
+    if from_unit == '°C':
+        return temp * 1.8 + 32
+    else:
+        return (temp - 32) / 1.8
+
+
+def get_temperature_reading(ap):
+    req = {
+        "header": {
+            "messageId": "01ebf625-0b89-4c4d-b3aa-32340e894689",
+            "name": "GetTemperatureReadingRequest",
+            "namespace": "Alexa.ConnectedHome.Query",
+            "payloadVersion": "2"
+        },
+        "payload": {
+            "accessToken": "[OAuth Token here]",
+            "appliance": to_appliance(ap),
+        }
+    }
+
+    resp = haaska.event_handler(req, None)
+    if resp['header']['name'] != 'GetTemperatureReadingResponse':
+        raise UnexpectedResponseException
+    return resp
+
+
+def set_target_temperature(ap, temperature):
+    req = {
+        "header": {
+            "messageId": "95872301-4ff6-4146-b3a4-ae84c760c13f",
+            "name": "SetTargetTemperatureRequest",
+            "namespace": "Alexa.ConnectedHome.Control",
+            "payloadVersion": "2"
+        },
+        "payload": {
+            "accessToken": "[OAuth Token here]",
+            "appliance": to_appliance(ap),
+            "targetTemperature": {
+                "value": temperature
+            }
+        }
+    }
+    return haaska.event_handler(req, None)
+
+
+def lower_target_temperature(ap, temperature):
+    req = {
+        "header": {
+            "messageId": "95872301-4ff6-4146-b3a4-ae84c760c140",
+            "name": "DecrementTargetTemperatureRequest",
+            "namespace": "Alexa.ConnectedHome.Control",
+            "payloadVersion": "2"
+        },
+        "payload": {
+            "accessToken": "[OAuth Token here]",
+            "appliance": to_appliance(ap),
+            "deltaTemperature": {
+                "value": temperature
+            }
+        }
+    }
+    return haaska.event_handler(req, None)
+
+
+def test_get_current_temperature():
+    climate = find_appliance('climate.heatpump')
+    r = get_temperature_reading(climate)
+    assert r['payload']['temperatureReading']['value'] == 25
+    climate = find_appliance('climate.hvac')
+    r = get_temperature_reading(climate)
+    assert r['payload']['temperatureReading']['value'] == 22
+    climate = find_appliance('climate.ecobee')
+    r = get_temperature_reading(climate)
+    assert r['payload']['temperatureReading']['value'] == 23
+
+
+def test_set_temperature():
+    for ap in appliances:
+        if 'setTargetTemperature' not in ap['actions']:
+            continue
+        if entity_domain(ap) != 'climate':
+            continue
+        turn_on(ap)
+        if 'temperature' not in get_state(ap)['attributes']:
+            continue
+        for t in [10, 15, 20, 25]:
+            r = set_target_temperature(ap, t)
+            assert r['header']['name'] == 'SetTargetTemperatureConfirmation'
+            assert t == convert_temp(
+                get_state(ap)['attributes']['temperature'],
+                get_state(ap)['attributes']['unit_of_measurement'])
+
+
+def test_lower_temperature():
+    for ap in appliances:
+        if 'decrementTargetTemperature' not in ap['actions']:
+            continue
+        if entity_domain(ap) != 'climate':
+            continue
+        turn_on(ap)
+        if 'temperature' not in get_state(ap)['attributes']:
+            continue
+        t = 20
+        set_target_temperature(ap, t)
+        assert t == convert_temp(
+            get_state(ap)['attributes']['temperature'],
+            get_state(ap)['attributes']['unit_of_measurement'])
+
+        r = lower_target_temperature(ap, 5)
+        assert r['header']['name'] == 'DecrementTargetTemperatureConfirmation'
+        t = 15
+        assert t == convert_temp(
+            get_state(ap)['attributes']['temperature'],
+            get_state(ap)['attributes']['unit_of_measurement'])
 
 
 def dim_light(ap, val):

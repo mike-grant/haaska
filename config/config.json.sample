@@ -3,6 +3,7 @@
   "password": "api_password",
   "allowed_domains": [
     "cover",
+    "climate",
     "garage_door",
     "group",
     "input_boolean",
