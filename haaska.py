@@ -281,7 +281,7 @@ def convert_temp(temp, from_unit='°C', to_unit='°C'):
 
 @handle('GetTemperatureReadingRequest')
 def handle_get_temperature_reading(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     temperature = e.get_current_temperature()
 
     r = {}
@@ -295,7 +295,7 @@ def handle_get_temperature_reading(ha, payload):
 
 @handle('GetTargetTemperatureRequest')
 def handle_get_target_temperature(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     temperature, mode = e.get_temperature()
 
     r = {}
@@ -313,7 +313,7 @@ def handle_get_target_temperature(ha, payload):
 
 
 def handle_temperature_adj(ha, payload, op=None):
-    e = mk_entity(ha, payload_to_entity(payload))
+    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     state = ha.get('states/' + e.entity_id)
     unit = state['attributes']['unit_of_measurement']
     min_temp = convert_temp(state['attributes']['min_temp'], unit)
