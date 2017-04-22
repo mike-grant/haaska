@@ -1,17 +1,4 @@
 {
   "url": "http://localhost:8123",
-  "password": "",
-  "allowed_domains": [
-    "cover",
-    "climate",
-    "garage_door",
-    "group",
-    "input_boolean",
-    "light",
-    "lock",
-    "media_player",
-    "scene",
-    "script",
-    "switch"
-  ]
+  "password": ""
 }
