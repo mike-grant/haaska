@@ -23,7 +23,6 @@
 import json
 import operator
 import requests
-import colorsys
 from hashlib import sha1
 from uuid import uuid4
 
@@ -298,6 +297,7 @@ def handle_set_color(ha, payload):
     e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     e.set_color(payload['color']['hue'], payload['color']['saturation'],
                 payload['color']['brightness'])
+    return {'achievedState': {'color': payload['color']}}
 
 
 @handle('SetColorTemperatureRequest')
@@ -305,6 +305,7 @@ def handle_set_color(ha, payload):
 def handle_set_color_temperature(ha, payload):
     e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
     e.set_color_temperature(payload['colorTemperature']['value'])
+    return {'achievedState': {'colorTemperature': payload['colorTemperature']}}
 
 
 class Entity(object):
@@ -403,13 +404,12 @@ class LightEntity(ToggleEntity):
         self._call_service('light/turn_on', {'brightness': brightness})
 
     def set_color(self, hue, saturation, brightness):
-        red, green, blue = colorsys.hsv_to_rgb(hue, saturation, brightness)
-        rgb = [int(red), int(green), int(blue)]
+        rgb = hsb2rgb([hue, saturation * 100, brightness * 100])
         self._call_service('light/turn_on', {'rgb_color': rgb})
 
     def set_color_temperature(self, val):
-        color_temp = (val / 1000000)
-        self._call_service('light/turn_on', {'color_temp': color_temp})
+        self._call_service('light/turn_on',
+                           {'color_temp': (1000000 / val)})
 
 
 class MediaPlayerEntity(ToggleEntity):
@@ -436,3 +436,58 @@ def mk_entity(ha, entity_id, supported_features):
 
     return domains.setdefault(entity_domain, ToggleEntity)(ha, entity_id,
                                                            supported_features)
+
+
+def hsb2rgb(hsb):
+    '''
+    Transforms a hsb array to the corresponding rgb tuple
+    In: hsb = array of three ints (h between 0 and 360, s and v between 0-100)
+    Out: rgb = array of three ints (between 0 and 255)
+    '''
+    H = float(hsb[0] / 360.0)
+    S = float(hsb[1] / 100.0)
+    B = float(hsb[2] / 100.0)
+
+    if (S == 0):
+        R = int(round(B * 255))
+        G = int(round(B * 255))
+        B = int(round(B * 255))
+    else:
+        var_h = H * 6
+        if (var_h == 6):
+            var_h = 0  # H must be < 1
+        var_i = int(var_h)
+        var_1 = B * (1 - S)
+        var_2 = B * (1 - S * (var_h - var_i))
+        var_3 = B * (1 - S * (1 - (var_h - var_i)))
+
+        if (var_i == 0):
+            var_r = B
+            var_g = var_3
+            var_b = var_1
+        elif (var_i == 1):
+            var_r = var_2
+            var_g = B
+            var_b = var_1
+        elif (var_i == 2):
+            var_r = var_1
+            var_g = B
+            var_b = var_3
+        elif (var_i == 3):
+            var_r = var_1
+            var_g = var_2
+            var_b = B
+        elif (var_i == 4):
+            var_r = var_3
+            var_g = var_1
+            var_b = B
+        else:
+            var_r = B
+            var_g = var_1
+            var_b = var_2
+
+        R = int(round(var_r * 255))
+        G = int(round(var_g * 255))
+        B = int(round(var_b * 255))
+
+    return [R, G, B]
