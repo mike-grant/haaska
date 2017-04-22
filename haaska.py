@@ -526,6 +526,7 @@ class ClimateEntity(Entity):
             data['operation_mode'] = mode
         self._call_service('climate/set_temperature', data)
 
+
 class FanEntity(ToggleEntity):
     def get_percentage(self):
         state = self.ha.get('states/' + self.entity_id)
