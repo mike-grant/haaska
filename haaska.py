@@ -22,12 +22,14 @@
 # SOFTWARE.
 
 import json
+import logging
 import operator
 import requests
 import colorsys
 from hashlib import sha1
 from uuid import uuid4
 
+logger = logging.getLogger()
 handlers = {}
 
 
@@ -52,6 +54,10 @@ def event_handler(event, context):
 
     name = event['header']['name']
     payload = event['payload']
+
+    logger.debug('calling event handler for %s, payload: %s', name,
+                 str({k: v for k, v in payload.items()
+                     if k != u'accessToken'}))
 
     return handlers[name](ha, payload)
 
@@ -111,6 +117,7 @@ def handle_health_check(ha, payload):
         ha.get('states')
         r['payload'] = {'isHealthy': True}
     except Exception as e:
+        logger.exception('HealthCheckRequest failed')
         r['payload'] = {'isHealthy': False, 'description': str(e)}
     finally:
         return r
@@ -125,8 +132,8 @@ def handle_discover_appliances(ha, payload):
                    'payloadVersion': '2'}
     try:
         r['payload'] = {'discoveredAppliances': discover_appliances(ha)}
-    except Exception as e:
-        print('Discovery failed: ' + str(e))
+    except Exception:
+        logger.exception('DiscoverAppliancesRequest failed')
         # v2 documentation is unclear as to what should be returned here if
         # discovery fails, so in the mean-time, just return 0 devices and log
         # the error
@@ -201,7 +208,7 @@ def control_response(name):
             except SmartHomeException as e:
                 return e.r
             except Exception as e:
-                print('operation failed: ' + str(e))
+                logger.exception('%s handler failed' % name)
                 return SmartHomeException().r
         return response_wrapper
     return inner
