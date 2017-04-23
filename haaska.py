@@ -281,10 +281,10 @@ def handle_decrement_percentage(ha, payload):
     return handle_percentage_adj(ha, payload, operator.sub)
 
 
-def convert_temp(temp, from_unit='°C', to_unit='°C'):
+def convert_temp(temp, from_unit=u'°C', to_unit=u'°C'):
     if temp is None or from_unit == to_unit:
         return temp
-    if from_unit == '°C':
+    if from_unit == u'°C':
         return temp * 1.8 + 32
     else:
         return (temp - 32) / 1.8

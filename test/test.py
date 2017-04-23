@@ -348,10 +348,10 @@ def test_set_volume():
             assert (get_state(ap)['attributes']['volume_level'] * 100.0) == v
 
 
-def convert_temp(temp, from_unit='°C', to_unit='°C'):
+def convert_temp(temp, from_unit=u'°C', to_unit=u'°C'):
     if temp is None or from_unit == to_unit:
         return temp
-    if from_unit == '°C':
+    if from_unit == u'°C':
         return temp * 1.8 + 32
     else:
         return (temp - 32) / 1.8
