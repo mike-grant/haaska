@@ -219,26 +219,26 @@ def supported_features(payload):
 @handle('TurnOnRequest')
 @control_response('TurnOnConfirmation')
 def handle_turn_on(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e = mk_entity(ha, payload_to_entity(payload))
     e.turn_on()
 
 
 @handle('TurnOffRequest')
 @control_response('TurnOffConfirmation')
 def handle_turn_off(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e = mk_entity(ha, payload_to_entity(payload))
     e.turn_off()
 
 
 @handle('SetPercentageRequest')
 @control_response('SetPercentageConfirmation')
 def handle_set_percentage(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e = mk_entity(ha, payload_to_entity(payload))
     e.set_percentage(payload['percentageState']['value'])
 
 
 def handle_percentage_adj(ha, payload, op):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e = mk_entity(ha, payload_to_entity(payload))
     current = e.get_percentage()
     new = op(current, payload['deltaPercentage']['value'])
 
@@ -282,7 +282,7 @@ def convert_temp(temp, from_unit='°C', to_unit='°C'):
 
 @handle('GetTemperatureReadingRequest')
 def handle_get_temperature_reading(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e = mk_entity(ha, payload_to_entity(payload))
     temperature = e.get_current_temperature()
 
     r = {}
@@ -296,7 +296,7 @@ def handle_get_temperature_reading(ha, payload):
 
 @handle('GetTargetTemperatureRequest')
 def handle_get_target_temperature(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e = mk_entity(ha, payload_to_entity(payload))
     temperature, mode = e.get_temperature()
 
     r = {}
@@ -314,7 +314,7 @@ def handle_get_target_temperature(ha, payload):
 
 
 def handle_temperature_adj(ha, payload, op=None):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e = mk_entity(ha, payload_to_entity(payload))
     state = ha.get('states/' + e.entity_id)
     unit = state['attributes']['unit_of_measurement']
     min_temp = convert_temp(state['attributes']['min_temp'], unit)
@@ -370,7 +370,7 @@ def handle_decrement_target_temperature(ha, payload):
 
 @handle('GetLockStateRequest')
 def handle_get_lock_state(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e = mk_entity(ha, payload_to_entity(payload))
     lock_state = e.get_lock_state().upper()
 
     r = {}
@@ -385,7 +385,7 @@ def handle_get_lock_state(ha, payload):
 @handle('SetLockStateRequest')
 @control_response('SetLockStateConfirmation')
 def handle_set_lock_state(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
+    e = mk_entity(ha, payload_to_entity(payload))
     e.set_lock_state(payload["lockState"])
     return {'lockState': payload["lockState"]}
 
@@ -577,7 +577,7 @@ class ClimateEntity(Entity):
         self._call_service('climate/set_temperature', data)
 
 
-def mk_entity(ha, entity_id, supported_features):
+def mk_entity(ha, entity_id, supported_features=0):
     entity_domain = entity_id.split('.', 1)[0]
 
     domains = {'garage_door': GarageDoorEntity,
