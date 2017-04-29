@@ -219,8 +219,11 @@ def payload_to_entity(payload):
 
 
 def supported_features(payload):
-    details = 'additionalApplianceDetails'
-    return payload['appliance'][details]['supported_features']
+    try:
+        details = 'additionalApplianceDetails'
+        return payload['appliance'][details]['supported_features']
+    except:
+        return 0
 
 
 @handle('TurnOnRequest')
