@@ -38,14 +38,44 @@ LIGHT_SUPPORT_RGB_COLOR = 16
 LIGHT_SUPPORT_XY_COLOR = 64
 
 
-def get_config():
-    with open('config.json') as f:
-        cfg = json.load(f)
-        return cfg
+class Configuration(object):
+    def __init__(self, filename=None):
+        all_domains = ['garage_door', 'group', 'input_boolean', 'switch',
+                       'fan', 'cover', 'lock', 'script', 'scene', 'light',
+                       'media_player', 'climate']
+
+        self._json = {}
+        if filename is not None:
+            with open(filename) as f:
+                self._json = json.load(f)
+
+        self.url = self.get(['url', 'ha_url'], default='http://localhost:8123')
+        self.certificate = self.get(['certificate', 'ha_cert'], default=False)
+        self.password = self.get(['password', 'ha_passwd'], default='')
+        self.allowed_domains = \
+            self.get(['allowed_domains', 'ha_allowed_entities'],
+                     default=all_domains)
+        self.suffix_entity_names = self.get(['suffix_entity_names'],
+                                            default=True)
+
+    def get(self, keys, default):
+        for key in keys:
+            if key in self._json:
+                return self._json[key]
+        return default
+
+    def dump(self):
+        c = {'url': self.url,
+             'password': self.password,
+             'certificate': self.certificate,
+             'allowed_domains': sorted(self.allowed_domains),
+             'suffix_entity_names': self.suffix_entity_names}
+        return json.dumps(c, indent=2, separators=(',', ': '))
 
 
 def event_handler(event, context):
-    ha = HomeAssistant(get_config())
+    config = Configuration('config.json')
+    ha = HomeAssistant(config)
 
     name = event['header']['name']
     payload = event['payload']
@@ -65,37 +95,24 @@ def handle(event):
 
 
 class HomeAssistant(object):
-    def __init__(self, config={}):
-        self.url = config['url']
-        self.headers = {'x-ha-access': config['password'],
+    def __init__(self, config):
+        self.config = config
+        self.url = config.url
+        self.headers = {'x-ha-access': config.password,
                         'content-type': 'application/json'}
 
-        self.cert = False
-        if 'certificate' in config:
-            self.cert = config['certificate']
-
-        self.allowed_domains = ['climate', 'cover', 'garage_door', 'group',
-                                'input_boolean', 'light', 'lock',
-                                'media_player', 'scene', 'script', 'switch']
-        if 'allowed_domains' in config:
-            self.allowed_domains = config['allowed_domains']
-
-        self.suffix_entity_names = True
-        if 'suffix_entity_names' in config:
-            self.suffix_entity_name = config['suffix_entity_names']
-
     def build_url(self, relurl):
-        return '%s/api/%s' % (self.url, relurl)
+        return '%s/api/%s' % (self.config.url, relurl)
 
     def get(self, relurl):
         r = requests.get(self.build_url(relurl), headers=self.headers,
-                         verify=self.cert)
+                         verify=self.config.certificate)
         r.raise_for_status()
         return r.json()
 
-    def post(self, relurl, data):
+    def post(self, relurl, d):
         r = requests.post(self.build_url(relurl), headers=self.headers,
-                          verify=self.cert, data=json.dumps(data))
+                          verify=self.config.certificate, data=json.dumps(d))
         r.raise_for_status()
         return r
 
@@ -158,7 +175,7 @@ def discover_appliances(ha):
         return x['entity_id'].split('.', 1)[0]
 
     def is_supported_entity(x):
-        return entity_domain(x) in ha.allowed_domains
+        return entity_domain(x) in ha.config.allowed_domains
 
     def is_skipped_entity(x):
         attr = x['attributes']
@@ -179,7 +196,7 @@ def discover_appliances(ha):
             o['friendlyName'] = x['attributes']['haaska_name']
         else:
             o['friendlyName'] = x['attributes']['friendly_name']
-            if ha.suffix_entity_names:
+            if ha.config.suffix_entity_names:
                 if entity_domain(x) == 'scene':
                     o['friendlyName'] += ' Scene'
                 elif entity_domain(x) == 'group':
