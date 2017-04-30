@@ -615,7 +615,7 @@ class Configuration(object):
         opts = {}
         opts['url'] = self.get(['url', 'ha_url'],
                                default='http://localhost:8123/api')
-        opts['ssl_verify'] = self.get(['ssl_verify', 'ha_cert'], default=False)
+        opts['ssl_verify'] = self.get(['ssl_verify', 'ha_cert'], default=True)
         opts['password'] = self.get(['password', 'ha_passwd'], default='')
         opts['allowed_domains'] = \
             sorted(self.get(['allowed_domains', 'ha_allowed_entities'],
