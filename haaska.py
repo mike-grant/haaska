@@ -612,18 +612,23 @@ class Configuration(object):
             with open(filename) as f:
                 self._json = json.load(f)
 
-        self.url = self.get(['url', 'ha_url'],
-                            default='http://localhost:8123/api')
-        self.ssl_verify = self.get(['ssl_verify', 'ha_cert'], default=False)
-        self.password = self.get(['password', 'ha_passwd'], default='')
-        self.allowed_domains = \
-            self.get(['allowed_domains', 'ha_allowed_entities'],
-                     default=DOMAINS.keys())
+        opts = {}
+        opts['url'] = self.get(['url', 'ha_url'],
+                               default='http://localhost:8123/api')
+        opts['ssl_verify'] = self.get(['ssl_verify', 'ha_cert'], default=False)
+        opts['password'] = self.get(['password', 'ha_passwd'], default='')
+        opts['allowed_domains'] = \
+            sorted(self.get(['allowed_domains', 'ha_allowed_entities'],
+                            default=DOMAINS.keys()))
 
         default_entity_suffixes = {'group': 'Group', 'scene': 'Scene'}
-        self.entity_suffixes = {domain: '' for domain in DOMAINS.keys()}
-        self.entity_suffixes.update(self.get(['entity_suffixes'],
-                                             default=default_entity_suffixes))
+        opts['entity_suffixes'] = {domain: '' for domain in DOMAINS.keys()}
+        opts['entity_suffixes'].update(self.get(['entity_suffixes'],
+                                       default=default_entity_suffixes))
+        self.opts = opts
+
+    def __getattr__(self, name):
+        return self.opts[name]
 
     def get(self, keys, default):
         for key in keys:
@@ -632,12 +637,7 @@ class Configuration(object):
         return default
 
     def dump(self):
-        c = {'url': self.url,
-             'password': self.password,
-             'ssl_verify': self.ssl_verify,
-             'allowed_domains': sorted(self.allowed_domains),
-             'entity_suffixes': self.entity_suffixes}
-        return json.dumps(c, indent=2, separators=(',', ': '))
+        return json.dumps(self.opts, indent=2, separators=(',', ': '))
 
 
 def event_handler(event, context):
