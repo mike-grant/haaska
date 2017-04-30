@@ -1,7 +1,4 @@
 {
-  "url": "http://localhost:8123/api",
-  "ssl_verify": false,
-  "password": "",
   "entity_suffixes": {
     "climate": "",
     "group": "Group",
@@ -29,5 +26,9 @@
     "scene",
     "script",
     "switch"
-  ]
+  ],
+  "url": "http://localhost:8123/api",
+  "debug": false,
+  "ssl_verify": false,
+  "password": ""
 }
