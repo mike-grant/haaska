@@ -586,31 +586,29 @@ class FanEntity(ToggleEntity):
         self._call_service('fan/set_speed', {'speed': speed})
 
 
+DOMAINS = {
+    'garage_door': GarageDoorEntity,
+    'group': ToggleEntity,
+    'input_boolean': ToggleEntity,
+    'switch': ToggleEntity,
+    'fan': FanEntity,
+    'cover': CoverEntity,
+    'lock': LockEntity,
+    'script': ScriptEntity,
+    'scene': SceneEntity,
+    'light': LightEntity,
+    'media_player': MediaPlayerEntity,
+    'climate': ClimateEntity
+}
+
+
 def mk_entity(ha, entity_id, supported_features=0):
     entity_domain = entity_id.split('.', 1)[0]
-
-    domains = {'garage_door': GarageDoorEntity,
-               'group': ToggleEntity,
-               'input_boolean': ToggleEntity,
-               'switch': ToggleEntity,
-               'fan': FanEntity,
-               'cover': CoverEntity,
-               'lock': LockEntity,
-               'script': ScriptEntity,
-               'scene': SceneEntity,
-               'light': LightEntity,
-               'media_player': MediaPlayerEntity,
-               'climate': ClimateEntity}
-
-    return domains[entity_domain](ha, entity_id, supported_features)
+    return DOMAINS[entity_domain](ha, entity_id, supported_features)
 
 
 class Configuration(object):
     def __init__(self, filename=None):
-        all_domains = ['garage_door', 'group', 'input_boolean', 'switch',
-                       'fan', 'cover', 'lock', 'script', 'scene', 'light',
-                       'media_player', 'climate']
-
         self._json = {}
         if filename is not None:
             with open(filename) as f:
@@ -621,7 +619,7 @@ class Configuration(object):
         self.password = self.get(['password', 'ha_passwd'], default='')
         self.allowed_domains = \
             self.get(['allowed_domains', 'ha_allowed_entities'],
-                     default=all_domains)
+                     default=DOMAINS.keys())
         self.suffix_entity_names = self.get(['suffix_entity_names'],
                                             default=True)
 
