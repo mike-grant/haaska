@@ -590,6 +590,9 @@ def mk_entity(ha, entity_id, supported_features=0):
     entity_domain = entity_id.split('.', 1)[0]
 
     domains = {'garage_door': GarageDoorEntity,
+               'group': ToggleEntity,
+               'input_boolean': ToggleEntity,
+               'switch': ToggleEntity,
                'fan': FanEntity,
                'cover': CoverEntity,
                'lock': LockEntity,
@@ -599,8 +602,7 @@ def mk_entity(ha, entity_id, supported_features=0):
                'media_player': MediaPlayerEntity,
                'climate': ClimateEntity}
 
-    return domains.setdefault(entity_domain, ToggleEntity)(ha, entity_id,
-                                                           supported_features)
+    return domains[entity_domain](ha, entity_id, supported_features)
 
 
 class Configuration(object):
