@@ -47,3 +47,9 @@ clean:
 .PHONY: sample_config
 sample_config:
 	python -c 'from haaska import Configuration; print(Configuration().dump())' > config/config.json.sample
+
+.PHONY: modernize_config
+modernize_config: config/config.json
+	@python -c 'from haaska import Configuration; print(Configuration("config/config.json").dump())' > config/config.json.modernized
+	@echo Generated config/config.json.modernized from your existing config/config.json
+	@echo Inspect that file and replace config/config.json with it to update your configuration
