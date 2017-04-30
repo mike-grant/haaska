@@ -38,62 +38,6 @@ LIGHT_SUPPORT_RGB_COLOR = 16
 LIGHT_SUPPORT_XY_COLOR = 64
 
 
-class Configuration(object):
-    def __init__(self, filename=None):
-        all_domains = ['garage_door', 'group', 'input_boolean', 'switch',
-                       'fan', 'cover', 'lock', 'script', 'scene', 'light',
-                       'media_player', 'climate']
-
-        self._json = {}
-        if filename is not None:
-            with open(filename) as f:
-                self._json = json.load(f)
-
-        self.url = self.get(['url', 'ha_url'], default='http://localhost:8123')
-        self.certificate = self.get(['certificate', 'ha_cert'], default=False)
-        self.password = self.get(['password', 'ha_passwd'], default='')
-        self.allowed_domains = \
-            self.get(['allowed_domains', 'ha_allowed_entities'],
-                     default=all_domains)
-        self.suffix_entity_names = self.get(['suffix_entity_names'],
-                                            default=True)
-
-    def get(self, keys, default):
-        for key in keys:
-            if key in self._json:
-                return self._json[key]
-        return default
-
-    def dump(self):
-        c = {'url': self.url,
-             'password': self.password,
-             'certificate': self.certificate,
-             'allowed_domains': sorted(self.allowed_domains),
-             'suffix_entity_names': self.suffix_entity_names}
-        return json.dumps(c, indent=2, separators=(',', ': '))
-
-
-def event_handler(event, context):
-    config = Configuration('config.json')
-    ha = HomeAssistant(config)
-
-    name = event['header']['name']
-    payload = event['payload']
-
-    logger.debug('calling event handler for %s, payload: %s', name,
-                 str({k: v for k, v in payload.items()
-                     if k != u'accessToken'}))
-
-    return handlers[name](ha, payload)
-
-
-def handle(event):
-    def inner(func):
-        handlers[event] = func
-        return func
-    return inner
-
-
 class HomeAssistant(object):
     def __init__(self, config):
         self.config = config
@@ -132,6 +76,13 @@ class ValueOutOfRangeError(SmartHomeException):
         super(ValueOutOfRangeError, self).__init__('ValueOutOfRangeError',
                                                    {'minimumValue': minValue,
                                                     'maximumValue': maxValue})
+
+
+def handle(event):
+    def inner(func):
+        handlers[event] = func
+        return func
+    return inner
 
 
 @handle('HealthCheckRequest')
@@ -650,3 +601,52 @@ def mk_entity(ha, entity_id, supported_features=0):
 
     return domains.setdefault(entity_domain, ToggleEntity)(ha, entity_id,
                                                            supported_features)
+
+
+class Configuration(object):
+    def __init__(self, filename=None):
+        all_domains = ['garage_door', 'group', 'input_boolean', 'switch',
+                       'fan', 'cover', 'lock', 'script', 'scene', 'light',
+                       'media_player', 'climate']
+
+        self._json = {}
+        if filename is not None:
+            with open(filename) as f:
+                self._json = json.load(f)
+
+        self.url = self.get(['url', 'ha_url'], default='http://localhost:8123')
+        self.certificate = self.get(['certificate', 'ha_cert'], default=False)
+        self.password = self.get(['password', 'ha_passwd'], default='')
+        self.allowed_domains = \
+            self.get(['allowed_domains', 'ha_allowed_entities'],
+                     default=all_domains)
+        self.suffix_entity_names = self.get(['suffix_entity_names'],
+                                            default=True)
+
+    def get(self, keys, default):
+        for key in keys:
+            if key in self._json:
+                return self._json[key]
+        return default
+
+    def dump(self):
+        c = {'url': self.url,
+             'password': self.password,
+             'certificate': self.certificate,
+             'allowed_domains': sorted(self.allowed_domains),
+             'suffix_entity_names': self.suffix_entity_names}
+        return json.dumps(c, indent=2, separators=(',', ': '))
+
+
+def event_handler(event, context):
+    config = Configuration('config.json')
+    ha = HomeAssistant(config)
+
+    name = event['header']['name']
+    payload = event['payload']
+
+    logger.debug('calling event handler for %s, payload: %s', name,
+                 str({k: v for k, v in payload.items()
+                     if k != u'accessToken'}))
+
+    return handlers[name](ha, payload)
