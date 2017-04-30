@@ -41,12 +41,12 @@ LIGHT_SUPPORT_XY_COLOR = 64
 class HomeAssistant(object):
     def __init__(self, config):
         self.config = config
-        self.url = config.url
+        self.url = config.url.rstrip('/')
         self.headers = {'x-ha-access': config.password,
                         'content-type': 'application/json'}
 
     def build_url(self, relurl):
-        return '%s/api/%s' % (self.config.url, relurl)
+        return '%s/%s' % (self.config.url, relurl)
 
     def get(self, relurl):
         r = requests.get(self.build_url(relurl), headers=self.headers,
@@ -612,7 +612,8 @@ class Configuration(object):
             with open(filename) as f:
                 self._json = json.load(f)
 
-        self.url = self.get(['url', 'ha_url'], default='http://localhost:8123')
+        self.url = self.get(['url', 'ha_url'],
+                            default='http://localhost:8123/api')
         self.certificate = self.get(['certificate', 'ha_cert'], default=False)
         self.password = self.get(['password', 'ha_passwd'], default='')
         self.allowed_domains = \
