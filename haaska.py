@@ -147,11 +147,9 @@ def discover_appliances(ha):
             o['friendlyName'] = x['attributes']['haaska_name']
         else:
             o['friendlyName'] = x['attributes']['friendly_name']
-            if ha.config.suffix_entity_names:
-                if entity_domain(x) == 'scene':
-                    o['friendlyName'] += ' Scene'
-                elif entity_domain(x) == 'group':
-                    o['friendlyName'] += ' Group'
+            suffix = ha.config.entity_suffixes[entity_domain(x)]
+            if suffix != '':
+                o['friendlyName'] += ' ' + suffix
         if 'haaska_desc' in x['attributes']:
             o['friendlyDescription'] = x['attributes']['haaska_desc']
         else:
@@ -620,8 +618,11 @@ class Configuration(object):
         self.allowed_domains = \
             self.get(['allowed_domains', 'ha_allowed_entities'],
                      default=DOMAINS.keys())
-        self.suffix_entity_names = self.get(['suffix_entity_names'],
-                                            default=True)
+
+        default_entity_suffixes = {'group': 'Group', 'scene': 'Scene'}
+        self.entity_suffixes = {domain: '' for domain in DOMAINS.keys()}
+        self.entity_suffixes.update(self.get(['entity_suffixes'],
+                                             default=default_entity_suffixes))
 
     def get(self, keys, default):
         for key in keys:
@@ -634,7 +635,7 @@ class Configuration(object):
              'password': self.password,
              'certificate': self.certificate,
              'allowed_domains': sorted(self.allowed_domains),
-             'suffix_entity_names': self.suffix_entity_names}
+             'entity_suffixes': self.entity_suffixes}
         return json.dumps(c, indent=2, separators=(',', ': '))
 
 
