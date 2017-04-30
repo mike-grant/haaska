@@ -625,6 +625,8 @@ class Configuration(object):
         opts['entity_suffixes'] = {domain: '' for domain in DOMAINS.keys()}
         opts['entity_suffixes'].update(self.get(['entity_suffixes'],
                                        default=default_entity_suffixes))
+
+        opts['debug'] = self.get(['debug'], default=False)
         self.opts = opts
 
     def __getattr__(self, name):
@@ -642,6 +644,8 @@ class Configuration(object):
 
 def event_handler(event, context):
     config = Configuration('config.json')
+    if config.debug:
+        logger.setLevel(logging.DEBUG)
     ha = HomeAssistant(config)
 
     name = event['header']['name']
