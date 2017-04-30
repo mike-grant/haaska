@@ -44,3 +44,6 @@ test:
 clean:
 	rm -rf $(BUILD_DIR) haaska.zip
 
+.PHONY: sample_config
+sample_config:
+	python -c 'from haaska import Configuration; print(Configuration().dump())' > config/config.json.sample
