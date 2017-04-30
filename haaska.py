@@ -50,13 +50,13 @@ class HomeAssistant(object):
 
     def get(self, relurl):
         r = requests.get(self.build_url(relurl), headers=self.headers,
-                         verify=self.config.certificate)
+                         verify=self.config.ssl_verify)
         r.raise_for_status()
         return r.json()
 
     def post(self, relurl, d):
         r = requests.post(self.build_url(relurl), headers=self.headers,
-                          verify=self.config.certificate, data=json.dumps(d))
+                          verify=self.config.ssl_verify, data=json.dumps(d))
         r.raise_for_status()
         return r
 
@@ -614,7 +614,7 @@ class Configuration(object):
 
         self.url = self.get(['url', 'ha_url'],
                             default='http://localhost:8123/api')
-        self.certificate = self.get(['certificate', 'ha_cert'], default=False)
+        self.ssl_verify = self.get(['ssl_verify', 'ha_cert'], default=False)
         self.password = self.get(['password', 'ha_passwd'], default='')
         self.allowed_domains = \
             self.get(['allowed_domains', 'ha_allowed_entities'],
@@ -634,7 +634,7 @@ class Configuration(object):
     def dump(self):
         c = {'url': self.url,
              'password': self.password,
-             'certificate': self.certificate,
+             'ssl_verify': self.ssl_verify,
              'allowed_domains': sorted(self.allowed_domains),
              'entity_suffixes': self.entity_suffixes}
         return json.dumps(c, indent=2, separators=(',', ': '))

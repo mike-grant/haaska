@@ -61,7 +61,7 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
 |-----------------------|--------------------------------------------------------------------------------------------------------------------|-----------|----------------------------------------------------------------------------------------------|
 | `url`.                | `https://demo.home-assistant.io.`.                                                                                 | **Yes**   | The API endpoint of your Home Assistant instance.                                            |
 | `password `           | `securepassword`                                                                                                   | **Yes**   | The API password of your Home Assistant instance.                                            |
-| `certificate`         | `mycert.crt`                                                                                                       | No        | The name of your self-signed certificate located in the `config/` directory.                 |
+| `ssl_verify`          | `mycert.crt`                                                                                                       | No        | This will be passed as the `verify` parameter for all requests; see [here](http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification) for options |
 | `allowed_domains`     | `["cover", "garage_door", "group", "input_boolean", "light", "lock", "media_player", "scene", "script", "switch"]` | No        | A JSON array of entity types to expose to Alexa. If not provided, the example value is used. |
 
 ## Usage
