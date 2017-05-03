@@ -7,6 +7,8 @@ haaska implements a skill adapter to bridge a [Home Assistant](https://home-assi
 
 | Type           | On/Off Supported? | Dim Supported? |
 |----------------|-------------------|----------------|
+| Climate        | Yes               | Temperature    |
+| Covers         | Yes               | No             |
 | Groups         | Yes               | No             |
 | Input Booleans | Yes               | No             |
 | Lights         | Yes               | Yes            |
@@ -24,13 +26,20 @@ haaska implements a skill adapter to bridge a [Home Assistant](https://home-assi
 
 1. Run `make` to build a deployable package of haaska. This will generate a `haaska.zip` file that you'll upload to AWS Lambda (if you're used to docker you can try running make with `docker build -t haaska . && docker run -v "$PWD":/usr/src/app haaska`
 1. Register with an OAuth provider, such as Login with Amazon.
+    * To use the current version of Login with Amazon, you must go to the [Developer Console](https://developer.amazon.com/)
+        * Under "Apps & Services", select "Login with Amazon" (not "Security Profiles")
+        * Click "Create a New Security Profile"
+        * You can enter anything for the name (which is shown on the login page) and the privacy URL
     * Note the "Client ID" and "Client Secret", as you'll need those later
 1. Create an Alexa skill and Lambda Function by following [these instructions](https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/steps-to-create-a-smart-home-skill) (with the modifications noted below).
     * The name of the Alexa skill doesn't matter, but I'd suggest "haaska"
     * The name of the Lambda function does matter; use "haaska", otherwise you'll need to modify the `FUNCTION_NAME` variable in the `Makefile`.
-    * Select `lambda_basic_execution` for the Lambda role
+    * For "Runtime", select "Python 2.7" as in the example
     * Select "Upload a .ZIP file" for "Code entry type", and upload `haaska.zip` that you created in step 1.
-    * For "Handler", enter "haaska.event\_handler"
+    * For "Handler", enter `haaska.event\_handler`
+    * For "Role":
+        * Select "Choose an existing role", and underneath, select `lambda_basic_execution` if it exists
+        * If `lambda_basic_execution` doesn't exist, select "Create a custom role" instead, and enter `lambda_basic_execution` as the "Role Name"
     * Leave the rest of the defaults alone, and click "Next"
     * Check "Enable event source"
     * Under the "Account Linking" section:
@@ -39,9 +48,9 @@ haaska implements a skill adapter to bridge a [Home Assistant](https://home-assi
         * Set Scope to profile
         * Set Access Token URI to https://api.amazon.com/auth/o2/token
         * Set Client Secret to the previously noted value from Login with Amazon
-        * Note the "Redirect URL"
+        * Note the one or more "Redirect URL(s)"
     * There are two properly sized Home Assistant logos in the images/ folder which you can upload to Amazon for use with your skill. Upload both on the "Publishing Information" step of the process.
-1. Go back to Login with Amazon and enter the "Redirect URL" as an "Allowed Return URL" for the application you registered.
+1. Go back to Login with Amazon, select "Web Settings" under "Manage" for your security profile, and add each "Redirect URL" from the Lambda function as an "Allowed Return URL".
 1. Send a test event by running `make test`, which will validate that haaska can communicate with your Home Assistant instance. Note that you must have the AWS CLI and [jq](https://stedolan.github.io/jq/) installed.
 
 ### Config Values
