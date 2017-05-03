@@ -42,22 +42,31 @@ class HomeAssistant(object):
     def __init__(self, config):
         self.config = config
         self.url = config.url.rstrip('/')
-        self.headers = {'x-ha-access': config.password,
-                        'content-type': 'application/json'}
+        self.session = requests.Session()
+        self.session.headers = {'x-ha-access': config.password,
+                                'content-type': 'application/json'}
+        self.session.verify = config.ssl_verify
 
     def build_url(self, relurl):
         return '%s/%s' % (self.config.url, relurl)
 
     def get(self, relurl):
-        r = requests.get(self.build_url(relurl), headers=self.headers,
-                         verify=self.config.ssl_verify)
+        r = self.session.get(self.build_url(relurl))
         r.raise_for_status()
         return r.json()
 
-    def post(self, relurl, d):
-        r = requests.post(self.build_url(relurl), headers=self.headers,
-                          verify=self.config.ssl_verify, data=json.dumps(d))
-        r.raise_for_status()
+    def post(self, relurl, d, wait=False):
+        read_timeout = None if wait else 0.01
+        r = None
+        try:
+            r = self.session.post(self.build_url(relurl),
+                                  data=json.dumps(d),
+                                  timeout=(None, read_timeout))
+            r.raise_for_status()
+        except requests.exceptions.ReadTimeout:
+            # Allow response timeouts after request was sent
+            logger.debug('request for %s sent without waiting for response',
+                         relurl)
         return r
 
 
