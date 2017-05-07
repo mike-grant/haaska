@@ -47,8 +47,7 @@ def find_appliance(entity_id):
 
 def get_state(ap):
     entity_id = ap['additionalApplianceDetails']['entity_id']
-    ha = haaska.HomeAssistant(haaska.cfg['ha_url'], haaska.cfg['ha_passwd'],
-                              haaska.cfg['ha_cert'])
+    ha = haaska.HomeAssistant(haaska.get_config())
     return ha.get('states/' + entity_id)
 
 
