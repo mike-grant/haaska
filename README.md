@@ -9,6 +9,7 @@ haaska implements a bridge between a [Home Assistant](https://home-assistant.io)
 |----------------|-------------------|----------------|
 | Climate        | Yes               | Temperature    |
 | Cover          | Yes               | No             |
+| Fans           | Yes               | Yes (speed)    |
 | Groups         | Yes               | No             |
 | Input Booleans | Yes               | No             |
 | Lights         | Yes               | Yes            |
