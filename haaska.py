@@ -173,10 +173,11 @@ def discover_appliances(ha):
             o['friendlyName'] = x['attributes']['haaska_name']
         else:
             o['friendlyName'] = x['attributes']['friendly_name']
-            if entity_domain(x) == 'scene':
-                o['friendlyName'] += ' Scene'
-            elif entity_domain(x) == 'group':
-                o['friendlyName'] += ' Group'
+            if 'suffix_entity_names' in cfg and cfg['suffix_entity_names']:
+                if entity_domain(x) == 'scene':
+                    o['friendlyName'] += ' Scene'
+                elif entity_domain(x) == 'group':
+                    o['friendlyName'] += ' Group'
         if 'haaska_desc' in x['attributes']:
             o['friendlyDescription'] = x['attributes']['haaska_desc']
         else:
