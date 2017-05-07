@@ -1,6 +1,6 @@
 # haaska Changelog
 
-## [unreleased]
+## [0.2] - 2017-05-07
 ### Added
 - Support for controlling the color ("Alexa, turn kitchen green") and color
 temperature ("Alexa, set lamp to cool white") of lights. 
@@ -23,4 +23,5 @@ to enable more verbose logging to CloudWatch
 First tagged release.
 
 [unreleased]: https://github.com/auchter/haaska/tree/dev
+[0.2]: https://github.com/auchter/haaska/tree/0.2
 [0.1]: https://github.com/auchter/haaska/tree/0.1
