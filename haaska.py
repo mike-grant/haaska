@@ -306,7 +306,7 @@ def handle_temperature_adj(ha, payload, op=None):
     temperature, mode = e.get_temperature(state)
 
     if op is not None and 'deltaTemperature' in payload:
-        new = op(temperature, payload['deltaTemperature']['value'])
+        new = op(temperature, float(payload['deltaTemperature']['value']))
         # Clamp the allowed temperature for relative adjustments
         if temperature != max_temp and temperature != min_temp:
             if new < min_temp:
@@ -314,7 +314,7 @@ def handle_temperature_adj(ha, payload, op=None):
             elif new > max_temp:
                 new = max_temp
     else:
-        new = payload['targetTemperature']['value']
+        new = float(payload['targetTemperature']['value'])
 
     if new > max_temp or new < min_temp:
         raise ValueOutOfRangeError(min_temp, max_temp)
