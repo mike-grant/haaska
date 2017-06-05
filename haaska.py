@@ -262,6 +262,7 @@ def handle_increment_percentage(ha, payload):
 def handle_decrement_percentage(ha, payload):
     return handle_percentage_adj(ha, payload, operator.sub)
 
+
 def handle_color_temperature_adj(ha, payload, op):
     e = mk_entity(ha, payload_to_entity(payload))
     current = e.get_color_temperature()
@@ -269,15 +270,18 @@ def handle_color_temperature_adj(ha, payload, op):
     e.set_color_temperature(new)
     return {'achievedState': {'colorTemperature': {'value': new}}}
 
+
 @handle('IncrementColorTemperatureRequest')
 @control_response('IncrementColorTemperatureConfirmation')
 def handle_increment_colortemp(ha, payload):
     return handle_color_temperature_adj(ha, payload, operator.add)
 
+
 @handle('DecrementColorTemperatureRequest')
 @control_response('DecrementColorTemperatureConfirmation')
 def handle_decrement_colortemp(ha, payload):
     return handle_color_temperature_adj(ha, payload, operator.sub)
+
 
 def convert_temp(temp, from_unit=u'°C', to_unit=u'°C'):
     if temp is None or from_unit == to_unit:
