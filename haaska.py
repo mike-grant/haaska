@@ -267,19 +267,17 @@ def handle_color_temperature_adj(ha, payload, op):
     current = e.get_color_temperature()
     new = op(current, 500)
     e.set_color_temperature(new)
-    return new
+    return {'achievedState': {'colorTemperature': {'value': new}}}
 
 @handle('IncrementColorTemperatureRequest')
 @control_response('IncrementColorTemperatureConfirmation')
 def handle_increment_colortemp(ha, payload):
-    acheivedState = handle_color_temperature_adj(ha, payload, operator.add)
-    return {'achievedState': {'colorTemperature': {'value': acheivedState}}}
+    return handle_color_temperature_adj(ha, payload, operator.add)
 
 @handle('DecrementColorTemperatureRequest')
 @control_response('DecrementColorTemperatureConfirmation')
 def handle_decrement_colortemp(ha, payload):
-    achivedState = handle_color_temperature_adj(ha, payload, operator.sub)
-    return {'achievedState': {'colorTemperature': {'value': achivedState}}}
+    return handle_color_temperature_adj(ha, payload, operator.sub)
 
 def convert_temp(temp, from_unit=u'°C', to_unit=u'°C'):
     if temp is None or from_unit == to_unit:
