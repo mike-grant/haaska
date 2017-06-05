@@ -262,6 +262,24 @@ def handle_increment_percentage(ha, payload):
 def handle_decrement_percentage(ha, payload):
     return handle_percentage_adj(ha, payload, operator.sub)
 
+def handle_color_temperature_adj(ha, payload, op):
+    e = mk_entity(ha, payload_to_entity(payload))
+    current = e.get_color_temperature()
+    new = op(current, 500)
+    e.set_color_temperature(new)
+    return new
+
+@handle('IncrementColorTemperatureRequest')
+@control_response('IncrementColorTemperatureConfirmation')
+def handle_increment_colortemp(ha, payload):
+    acheivedState = handle_color_temperature_adj(ha, payload, operator.add)
+    return {'achievedState': {'colorTemperature': {'value': acheivedState}}}
+
+@handle('DecrementColorTemperatureRequest')
+@control_response('DecrementColorTemperatureConfirmation')
+def handle_decrement_colortemp(ha, payload):
+    achivedState = handle_color_temperature_adj(ha, payload, operator.sub)
+    return {'achievedState': {'colorTemperature': {'value': achivedState}}}
 
 def convert_temp(temp, from_unit=u'°C', to_unit=u'°C'):
     if temp is None or from_unit == to_unit:
@@ -443,6 +461,8 @@ class Entity(object):
                 actions.append('setColor')
             if self.supported_features & LIGHT_SUPPORT_COLOR_TEMP:
                 actions.append('setColorTemperature')
+                actions.append('incrementColorTemperature')
+                actions.append('decrementColorTemperature')
 
         return actions
 
@@ -502,6 +522,11 @@ class LightEntity(ToggleEntity):
     def set_percentage(self, val):
         brightness = (val / 100.0) * 255.0
         self._call_service('light/turn_on', {'brightness': brightness})
+
+    def get_color_temperature(self):
+        state = self.ha.get('states/' + self.entity_id)
+        current_temperature = state['attributes']['color_temp']
+        return (1000000 / current_temperature)
 
     def set_color(self, hue, saturation, brightness):
         rgb = [int(round(i * 255)) for i in colorsys.hsv_to_rgb(hue / 360.0,
