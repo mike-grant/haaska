@@ -40,6 +40,26 @@ test:
 		--payload ${TEST_PAYLOAD} \
 		/dev/fd/3 3>&1 >/dev/null | jq -e '., .payload.isHealthy'
 
+DISCOVERY_PAYLOAD:='                              \
+{                                                 \
+  "header": {                                     \
+    "payloadVersion": "2",                        \
+    "namespace": "Alexa.ConnectedHome.Discovery", \
+    "name": "DiscoverAppliancesRequest"           \
+  },                                              \
+  "payload": {                                    \
+    "accessToken": "..."                          \
+  }                                               \
+}'
+
+.PHONY: discover
+discover:
+	@aws lambda invoke \
+		--function-name $(FUNCTION_NAME) \
+		--payload ${DISCOVERY_PAYLOAD} \
+		/dev/fd/3 3>&1 >/dev/null | jq '.'
+
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR) haaska.zip
