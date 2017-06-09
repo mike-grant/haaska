@@ -12,6 +12,7 @@
     "fan": "",
     "light": "",
     "input_boolean": ""
+    "input_slider": ""
   },
   "allowed_domains": [
     "climate",
@@ -20,6 +21,7 @@
     "garage_door",
     "group",
     "input_boolean",
+    "input_slider",
     "light",
     "lock",
     "media_player",
