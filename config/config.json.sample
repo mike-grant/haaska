@@ -11,7 +11,7 @@
     "switch": "",
     "fan": "",
     "light": "",
-    "input_boolean": ""
+    "input_boolean": "",
     "input_slider": ""
   },
   "allowed_domains": [

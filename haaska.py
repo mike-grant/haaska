@@ -414,17 +414,17 @@ class ToggleEntity(Entity):
 class InputSliderEntity(Entity):
     def get_percentage(self):
         state = self.ha.get('states/' + self.entity_id)
-        value = state['state']
-        minimum = state['attributes']['minimum']
-        maximum = state['attributes']['maximum']
+        value = float(state['state'])
+        minimum = state['attributes']['min']
+        maximum = state['attributes']['max']
         adjusted = value - minimum
 
         return (adjusted * 100.0 / (maximum - minimum))
 
     def set_percentage(self, val):
         state = self.ha.get('states/' + self.entity_id)
-        minimum = state['attributes']['minimum']
-        maximum = state['attributes']['maximum']
+        minimum = state['attributes']['min']
+        maximum = state['attributes']['max']
         step = state['attributes']['step']
         scaled = val * (maximum - minimum) / 100.0
         rounded = step * round(scaled / step)

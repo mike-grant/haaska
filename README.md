@@ -12,6 +12,7 @@ haaska implements a bridge between a [Home Assistant](https://home-assistant.io)
 | Fans           | Yes               | Yes (speed)    |
 | Groups         | Yes               | No             |
 | Input Booleans | Yes               | No             |
+| Input Sliders  | No                | Yes (value)    |
 | Lights         | Yes               | Yes            |
 | Locks          | Lock/Unlock       | No             |
 | Media Players  | Yes               | Yes (volume)   |
