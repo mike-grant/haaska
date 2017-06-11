@@ -5,6 +5,7 @@
 # $ hass --demo
 
 import sys
+import unittest
 from nose.tools import assert_raises
 sys.path.insert(0, '..')
 import haaska  # noqa: E402
@@ -28,14 +29,16 @@ discovery = haaska.event_handler(discover_appliance_request(), None)
 appliances = discovery['payload']['discoveredAppliances']
 
 
-def test_discovery_header():
-    assert discovery['header']['namespace'] == 'Alexa.ConnectedHome.Discovery'
-    assert discovery['header']['name'] == 'DiscoverAppliancesResponse'
+class DiscoveryTests(unittest.TestCase):
+    def test_discovery_header(self):
+        self.assertEqual(discovery['header']['namespace'],
+                         'Alexa.ConnectedHome.Discovery')
+        self.assertEqual(discovery['header']['name'],
+                         'DiscoverAppliancesResponse')
 
-
-def test_reachable():
-    for ap in appliances:
-        assert ap['isReachable']
+    def test_reachable(self):
+        for ap in appliances:
+            self.assertTrue(ap['isReachable'])
 
 
 def find_appliance(entity_id):
@@ -107,84 +110,118 @@ def assert_state_is(ap, state):
     assert get_state(ap)['state'] == state
 
 
-def test_switch_on_off_on():
-    sw = find_appliance(u'switch.decorative_lights')
-    turn_on(sw)
-    assert_state_is(sw, 'on')
-    turn_off(sw)
-    assert_state_is(sw, 'off')
-    turn_on(sw)
-    assert_state_is(sw, 'on')
+class OnOffTests(unittest.TestCase):
+    def assertStateIs(self, ap, state):
+        self.assertEqual(get_state(ap)['state'], state)
 
+    def test_switch_on_off_on(self):
+        sw = find_appliance(u'switch.decorative_lights')
+        turn_on(sw)
+        self.assertStateIs(sw, 'on')
+        turn_off(sw)
+        self.assertStateIs(sw, 'off')
+        turn_on(sw)
+        self.assertStateIs(sw, 'on')
 
-def test_switch_turn_on_twice():
-    sw = find_appliance(u'switch.decorative_lights')
-    turn_on(sw)
-    assert_state_is(sw, 'on')
-    turn_on(sw)
-    assert_state_is(sw, 'on')
+    def test_switch_turn_on_twice(self):
+        sw = find_appliance(u'switch.decorative_lights')
+        turn_on(sw)
+        self.assertStateIs(sw, 'on')
+        turn_on(sw)
+        self.assertStateIs(sw, 'on')
 
+    def test_switch_turn_off_twice(self):
+        sw = find_appliance(u'switch.decorative_lights')
+        turn_off(sw)
+        self.assertStateIs(sw, 'off')
+        turn_off(sw)
+        self.assertStateIs(sw, 'off')
 
-def test_switch_turn_off_twice():
-    sw = find_appliance(u'switch.decorative_lights')
-    turn_off(sw)
-    assert_state_is(sw, 'off')
-    turn_off(sw)
-    assert_state_is(sw, 'off')
+    def test_light_on_off_on(self):
+        light = find_appliance(u'light.bed_light')
+        turn_on(light)
+        self.assertStateIs(light, 'on')
+        turn_off(light)
+        self.assertStateIs(light, 'off')
+        turn_on(light)
+        self.assertStateIs(light, 'on')
 
+    def test_input_boolean_on_off_on(self):
+        ib = find_appliance('input_boolean.notify')
+        turn_on(ib)
+        self.assertStateIs(ib, 'on')
+        turn_off(ib)
+        self.assertStateIs(ib, 'off')
+        turn_on(ib)
+        self.assertStateIs(ib, 'on')
 
-def test_light_on_off_on():
-    light = find_appliance(u'light.bed_light')
-    turn_on(light)
-    assert_state_is(light, 'on')
-    turn_off(light)
-    assert_state_is(light, 'off')
-    turn_on(light)
-    assert_state_is(light, 'on')
+    def test_media_player_on_off_on(self):
+        player = find_appliance('media_player.bedroom')
+        self.assertStateIs(player, 'playing')
+        turn_off(player)
+        self.assertStateIs(player, 'off')
+        turn_on(player)
+        self.assertStateIs(player, 'playing')
 
+    def test_climate_on_off_on(self):
+        climate = find_appliance('climate.ecobee')
+        self.assertIn(get_state(climate)['state'], ['auto', 'cool', 'heat'])
+        turn_off(climate)
+        self.assertStateIs(climate, 'off')
+        turn_on(climate)
+        self.assertIn(get_state(climate)['state'], ['auto', 'cool', 'heat'])
 
-def test_input_boolean_on_off_on():
-    ib = find_appliance('input_boolean.notify')
-    turn_on(ib)
-    assert_state_is(ib, 'on')
-    turn_off(ib)
-    assert_state_is(ib, 'off')
-    turn_on(ib)
-    assert_state_is(ib, 'on')
+    def test_lock_off_on_fails(self):
+        lock = find_appliance('lock.kitchen_door')
+        assert_raises(UnexpectedResponseException, turn_off, lock)
+        assert_raises(UnexpectedResponseException, turn_on, lock)
 
+    def test_cover_on_off_on(self):
+        cover = find_appliance('cover.garage_door')
+        turn_on(cover)
+        self.assertStateIs(cover, 'open')
+        turn_off(cover)
+        self.assertStateIs(cover, 'closed')
+        turn_on(cover)
+        self.assertStateIs(cover, 'open')
 
-def test_media_player_on_off_on():
-    player = find_appliance('media_player.bedroom')
-    assert_state_is(player, 'playing')
-    turn_off(player)
-    assert_state_is(player, 'off')
-    turn_on(player)
-    assert_state_is(player, 'playing')
+    def test_turn_off(self):
+        for ap in appliances:
+            if 'turnOff' not in ap['actions']:
+                continue
+            resp = turn_off(ap)
+            self.assertEqual(resp['header']['name'], 'TurnOffConfirmation')
+            self.assertTrue(resp['payload']['success'])
+            if entity_domain(ap) == 'light' or \
+                    entity_domain(ap) == 'input_boolean':
+                self.assertStateIs(ap, 'off')
+            elif entity_domain(ap) == 'media_player':
+                self.assertStateIs(ap, 'off')
+            elif entity_domain(ap) == 'climate':
+                self.assertStateIs(ap, 'off')
+            elif entity_domain(ap) == 'garage_door':
+                self.assertStateIs(ap, 'closed')
+            elif entity_domain(ap) == 'lock':
+                self.assertStateIs(ap, 'unlocked')
 
-
-def test_climate_on_off_on():
-    climate = find_appliance('climate.ecobee')
-    assert_state_is(climate, 'auto')
-    turn_off(climate)
-    assert_state_is(climate, 'off')
-    turn_on(climate)
-    assert_state_is(climate, 'auto')
-
-
-def test_lock_off_on_fails():
-    lock = find_appliance('lock.kitchen_door')
-    assert_raises(UnexpectedResponseException, turn_off, lock)
-    assert_raises(UnexpectedResponseException, turn_on, lock)
-
-
-def test_cover_on_off_on():
-    cover = find_appliance('cover.garage_door')
-    turn_on(cover)
-    assert_state_is(cover, 'open')
-    turn_off(cover)
-    assert_state_is(cover, 'closed')
-    turn_on(cover)
-    assert_state_is(cover, 'open')
+    def test_turn_on(self):
+        for ap in appliances:
+            if 'turnOn' not in ap['actions']:
+                continue
+            resp = turn_on(ap)
+            self.assertEqual(resp['header']['name'], 'TurnOnConfirmation')
+            self.assertTrue(resp['payload']['success'])
+            if entity_domain(ap) == 'light' or \
+                    entity_domain(ap) == 'input_boolean':
+                self.assertStateIs(ap, 'on')
+            elif entity_domain(ap) == 'media_player':
+                self.assertStateIs(ap, 'playing')
+            elif entity_domain(ap) == 'climate':
+                self.assertIn(get_state(ap)['state'], ['auto', 'cool', 'heat'])
+            elif entity_domain(ap) == 'garage_door':
+                self.assertStateIs(ap, 'open')
+            elif entity_domain(ap) == 'lock':
+                self.assertStateIs(ap, 'locked')
 
 
 def set_lock_state(ap, locked):
@@ -208,16 +245,6 @@ def set_lock_state(ap, locked):
     return resp
 
 
-def test_lock_unlock():
-    lock = find_appliance('lock.kitchen_door')
-    set_lock_state(lock, True)
-    assert_state_is(lock, 'locked')
-    set_lock_state(lock, False)
-    assert_state_is(lock, 'unlocked')
-    set_lock_state(lock, True)
-    assert_state_is(lock, 'locked')
-
-
 def get_lock_state(ap):
     req = {
         "header": {
@@ -238,58 +265,32 @@ def get_lock_state(ap):
     return resp
 
 
-def test_get_lock_state():
-    lock = find_appliance('lock.kitchen_door')
+class LockTests(unittest.TestCase):
+    # TODO: don't copy this all over
+    def assertStateIs(self, ap, state):
+        self.assertEqual(get_state(ap)['state'], state)
 
-    set_lock_state(lock, True)
-    assert_state_is(lock, 'locked')
-    r = get_lock_state(lock)
-    assert r['payload']['lockState'] == 'LOCKED'
+    def test_lock_unlock(self):
+        lock = find_appliance('lock.kitchen_door')
+        set_lock_state(lock, True)
+        self.assertStateIs(lock, 'locked')
+        set_lock_state(lock, False)
+        self.assertStateIs(lock, 'unlocked')
+        set_lock_state(lock, True)
+        self.assertStateIs(lock, 'locked')
 
-    set_lock_state(lock, False)
-    assert_state_is(lock, 'unlocked')
-    r = get_lock_state(lock)
-    assert r['payload']['lockState'] == 'UNLOCKED'
+    def test_get_lock_state(self):
+        lock = find_appliance('lock.kitchen_door')
 
+        set_lock_state(lock, True)
+        self.assertStateIs(lock, 'locked')
+        r = get_lock_state(lock)
+        self.assertEqual(r['payload']['lockState'], 'LOCKED')
 
-def test_turn_off():
-    for ap in appliances:
-        if 'turnOff' not in ap['actions']:
-            continue
-        resp = turn_off(ap)
-        assert resp['header']['name'] == 'TurnOffConfirmation'
-        assert resp['payload']['success']
-        if entity_domain(ap) == 'light' or \
-                entity_domain(ap) == 'input_boolean':
-            assert get_state(ap)['state'] == 'off'
-        elif entity_domain(ap) == 'media_player':
-            assert get_state(ap)['state'] == 'off'
-        elif entity_domain(ap) == 'climate':
-            assert get_state(ap)['state'] == 'off'
-        elif entity_domain(ap) == 'garage_door':
-            assert get_state(ap)['state'] == 'closed'
-        elif entity_domain(ap) == 'lock':
-            assert get_state(ap)['state'] == 'unlocked'
-
-
-def test_turn_on():
-    for ap in appliances:
-        if 'turnOn' not in ap['actions']:
-            continue
-        resp = turn_on(ap)
-        assert resp['header']['name'] == 'TurnOnConfirmation'
-        assert resp['payload']['success']
-        if entity_domain(ap) == 'light' or \
-                entity_domain(ap) == 'input_boolean':
-            assert get_state(ap)['state'] == 'on'
-        elif entity_domain(ap) == 'media_player':
-            assert get_state(ap)['state'] == 'playing'
-        elif entity_domain(ap) == 'climate':
-            assert get_state(ap)['state'] in ['auto', 'cool', 'heat']
-        elif entity_domain(ap) == 'garage_door':
-            assert get_state(ap)['state'] == 'open'
-        elif entity_domain(ap) == 'lock':
-            assert get_state(ap)['state'] == 'locked'
+        set_lock_state(lock, False)
+        self.assertStateIs(lock, 'unlocked')
+        r = get_lock_state(lock)
+        self.assertEqual(r['payload']['lockState'], 'UNLOCKED')
 
 
 def set_percentage(ap, percentage):
@@ -317,34 +318,38 @@ def get_brightness(ap):
     return b
 
 
-def test_set_light_percentage():
-    for ap in appliances:
-        if 'setPercentage' not in ap['actions']:
-            continue
-        if entity_domain(ap) != 'light':
-            continue
-        turn_on(ap)
-        if 'brightness' not in get_state(ap)['attributes']:
-            continue
-        for v in [10, 50, 75, 100]:
-            resp = set_percentage(ap, v)
-            assert resp['header']['name'] == 'SetPercentageConfirmation'
-            assert get_state(ap)['state'] == 'on'
-            assert get_brightness(ap) == v
+class PercentageTests(unittest.TestCase):
+    def test_set_light_percentage(self):
+        for ap in appliances:
+            if 'setPercentage' not in ap['actions']:
+                continue
+            if entity_domain(ap) != 'light':
+                continue
+            turn_on(ap)
+            if 'brightness' not in get_state(ap)['attributes']:
+                continue
+            for v in [10, 50, 75, 100]:
+                resp = set_percentage(ap, v)
+                self.assertEqual(resp['header']['name'],
+                                 'SetPercentageConfirmation')
+                self.assertEqual(get_state(ap)['state'], 'on')
+                self.assertEqual(get_brightness(ap), v)
 
-
-def test_set_volume():
-    for ap in appliances:
-        if 'setPercentage' not in ap['actions']:
-            continue
-        if entity_domain(ap) != 'media_player':
-            continue
-        if (int(get_state(ap)['attributes']['supported_features'])) & 4 == 0:
-            continue
-        for v in [10, 50, 75, 100]:
-            resp = set_percentage(ap, v)
-            assert resp['header']['name'] == 'SetPercentageConfirmation'
-            assert (get_state(ap)['attributes']['volume_level'] * 100.0) == v
+    def test_set_volume(self):
+        for ap in appliances:
+            if 'setPercentage' not in ap['actions']:
+                continue
+            if entity_domain(ap) != 'media_player':
+                continue
+            features = get_state(ap)['attributes']['supported_features']
+            if int(features) & 4 == 0:
+                continue
+            for v in [10, 50, 75, 100]:
+                resp = set_percentage(ap, v)
+                self.assertEqual(resp['header']['name'],
+                                 'SetPercentageConfirmation')
+                level = get_state(ap)['attributes']['volume_level'] * 100.0
+                self.assertEqual(level, v)
 
 
 def convert_temp(temp, from_unit=u'°C', to_unit=u'°C'):
@@ -414,56 +419,57 @@ def lower_target_temperature(ap, temperature):
     return haaska.event_handler(req, None)
 
 
-def test_get_current_temperature():
-    climate = find_appliance('climate.heatpump')
-    r = get_temperature_reading(climate)
-    assert r['payload']['temperatureReading']['value'] == 25
-    climate = find_appliance('climate.hvac')
-    r = get_temperature_reading(climate)
-    assert r['payload']['temperatureReading']['value'] == 22
-    climate = find_appliance('climate.ecobee')
-    r = get_temperature_reading(climate)
-    assert r['payload']['temperatureReading']['value'] == 23
+class ClimateTests(unittest.TestCase):
+    def test_get_current_temperature(self):
+        climate = find_appliance('climate.heatpump')
+        r = get_temperature_reading(climate)
+        self.assertEqual(r['payload']['temperatureReading']['value'], 25)
+        climate = find_appliance('climate.hvac')
+        r = get_temperature_reading(climate)
+        self.assertEqual(r['payload']['temperatureReading']['value'], 22)
+        climate = find_appliance('climate.ecobee')
+        r = get_temperature_reading(climate)
+        self.assertEqual(r['payload']['temperatureReading']['value'], 23)
 
+    def test_set_temperature(self):
+        for ap in appliances:
+            if 'setTargetTemperature' not in ap['actions']:
+                continue
+            if entity_domain(ap) != 'climate':
+                continue
+            turn_on(ap)
+            if 'temperature' not in get_state(ap)['attributes']:
+                continue
+            for t in [10, 15, 20, 25]:
+                r = set_target_temperature(ap, t)
+                self.assertEqual(r['header']['name'],
+                                 'SetTargetTemperatureConfirmation')
+                self.assertEqual(t, convert_temp(
+                    get_state(ap)['attributes']['temperature'],
+                    get_state(ap)['attributes']['unit_of_measurement']))
 
-def test_set_temperature():
-    for ap in appliances:
-        if 'setTargetTemperature' not in ap['actions']:
-            continue
-        if entity_domain(ap) != 'climate':
-            continue
-        turn_on(ap)
-        if 'temperature' not in get_state(ap)['attributes']:
-            continue
-        for t in [10, 15, 20, 25]:
-            r = set_target_temperature(ap, t)
-            assert r['header']['name'] == 'SetTargetTemperatureConfirmation'
-            assert t == convert_temp(
+    def test_lower_temperature(self):
+        for ap in appliances:
+            if 'decrementTargetTemperature' not in ap['actions']:
+                continue
+            if entity_domain(ap) != 'climate':
+                continue
+            turn_on(ap)
+            if 'temperature' not in get_state(ap)['attributes']:
+                continue
+            t = 20
+            set_target_temperature(ap, t)
+            self.assertEqual(t, convert_temp(
                 get_state(ap)['attributes']['temperature'],
-                get_state(ap)['attributes']['unit_of_measurement'])
+                get_state(ap)['attributes']['unit_of_measurement']))
 
-
-def test_lower_temperature():
-    for ap in appliances:
-        if 'decrementTargetTemperature' not in ap['actions']:
-            continue
-        if entity_domain(ap) != 'climate':
-            continue
-        turn_on(ap)
-        if 'temperature' not in get_state(ap)['attributes']:
-            continue
-        t = 20
-        set_target_temperature(ap, t)
-        assert t == convert_temp(
-            get_state(ap)['attributes']['temperature'],
-            get_state(ap)['attributes']['unit_of_measurement'])
-
-        r = lower_target_temperature(ap, 5)
-        assert r['header']['name'] == 'DecrementTargetTemperatureConfirmation'
-        t = 15
-        assert t == convert_temp(
-            get_state(ap)['attributes']['temperature'],
-            get_state(ap)['attributes']['unit_of_measurement'])
+            r = lower_target_temperature(ap, 5)
+            self.assertEqual(r['header']['name'],
+                             'DecrementTargetTemperatureConfirmation')
+            t = 15
+            self.assertEqual(t, convert_temp(
+                get_state(ap)['attributes']['temperature'],
+                get_state(ap)['attributes']['unit_of_measurement']))
 
 
 def dim_light(ap, val):
@@ -485,23 +491,6 @@ def dim_light(ap, val):
     return haaska.event_handler(req, None)
 
 
-def test_dim_light():
-    for ap in appliances:
-        if 'decrementPercentage' not in ap['actions']:
-            continue
-        if entity_domain(ap) != 'light':
-            continue
-        turn_on(ap)
-        if 'brightness' not in get_state(ap)['attributes']:
-            continue
-        set_percentage(ap, 50)
-        assert get_brightness(ap) == 50
-        resp = dim_light(ap, 20)
-        assert resp['header']['name'] == 'DecrementPercentageConfirmation'
-        assert get_state(ap)['state'] == 'on'
-        assert get_brightness(ap) == 30
-
-
 def brighten_light(ap, val):
     req = {
         "header": {
@@ -521,18 +510,37 @@ def brighten_light(ap, val):
     return haaska.event_handler(req, None)
 
 
-def test_brighten_light():
-    for ap in appliances:
-        if 'incrementPercentage' not in ap['actions']:
-            continue
-        if entity_domain(ap) != 'light':
-            continue
-        turn_on(ap)
-        if 'brightness' not in get_state(ap)['attributes']:
-            continue
-        set_percentage(ap, 50)
-        assert get_brightness(ap) == 50
-        resp = brighten_light(ap, 20)
-        assert resp['header']['name'] == 'IncrementPercentageConfirmation'
-        assert get_state(ap)['state'] == 'on'
-        assert get_brightness(ap) == 70
+class LightTests(unittest.TestCase):
+    def test_brighten_light(self):
+        for ap in appliances:
+            if 'incrementPercentage' not in ap['actions']:
+                continue
+            if entity_domain(ap) != 'light':
+                continue
+            turn_on(ap)
+            if 'brightness' not in get_state(ap)['attributes']:
+                continue
+            set_percentage(ap, 50)
+            self.assertEqual(get_brightness(ap), 50)
+            resp = brighten_light(ap, 20)
+            self.assertEqual(resp['header']['name'],
+                             'IncrementPercentageConfirmation')
+            self.assertEqual(get_state(ap)['state'], 'on')
+            self.assertEqual(get_brightness(ap), 70)
+
+    def test_dim_light(self):
+        for ap in appliances:
+            if 'decrementPercentage' not in ap['actions']:
+                continue
+            if entity_domain(ap) != 'light':
+                continue
+            turn_on(ap)
+            if 'brightness' not in get_state(ap)['attributes']:
+                continue
+            set_percentage(ap, 50)
+            self.assertEqual(get_brightness(ap), 50)
+            resp = dim_light(ap, 20)
+            self.assertEqual(resp['header']['name'],
+                             'DecrementPercentageConfirmation')
+            self.assertEqual(get_state(ap)['state'], 'on')
+            self.assertEqual(get_brightness(ap), 30)
