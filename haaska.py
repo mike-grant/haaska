@@ -30,7 +30,6 @@ from hashlib import sha1
 from uuid import uuid4
 
 logger = logging.getLogger()
-handlers = {}
 
 
 LIGHT_SUPPORT_COLOR_TEMP = 2
@@ -59,6 +58,7 @@ class HomeAssistant(object):
         read_timeout = None if wait else 0.01
         r = None
         try:
+            logger.debug('calling %s with %s', relurl, str(d))
             r = self.session.post(self.build_url(relurl),
                                   data=json.dumps(d),
                                   timeout=(None, read_timeout))
@@ -70,64 +70,224 @@ class HomeAssistant(object):
         return r
 
 
-class SmartHomeException(Exception):
-    def __init__(self, name="DriverInternalError", payload={}):
-        self.r = {}
-        self.r['header'] = {'namespace': 'Alexa.ConnectedHome.Control',
-                            'name': name,
-                            'payloadVersion': '2',
-                            'messageId': str(uuid4())}
-        self.r['payload'] = payload
+class ConnectedHomeCall(object):
+    def __init__(self, namespace, name, ha, payload):
+        self.namespace = namespace
+        self.name = name
+        self.response_name = self.name.replace('Request', 'Response')
+        self.ha = ha
+        self.payload = payload
+        self.entity = None
+        if 'appliance' in self.payload:
+            details = payload['appliance']['additionalApplianceDetails']
+            self.entity = mk_entity(ha, details['entity_id'])
 
+    class ConnectedHomeException(Exception):
+        def __init__(self, name="DriverInternalError", payload={}):
+            self.error_name = name
+            self.payload = payload
 
-class ValueOutOfRangeError(SmartHomeException):
-    def __init__(self, minValue, maxValue):
-        super(ValueOutOfRangeError, self).__init__('ValueOutOfRangeError',
-                                                   {'minimumValue': minValue,
-                                                    'maximumValue': maxValue})
+    class ValueOutOfRangeError(ConnectedHomeException):
+        def __init__(self, minValue, maxValue):
+            self.error_name = 'ValueOutOfRangeError'
+            self.payload = {'minimumValue': minValue, 'maximumValue': maxValue}
 
+    def invoke(self, name):
+        logger.debug('invoking %s %s', self.namespace, name)
+        r = {}
+        try:
+            payload = operator.attrgetter(name)(self)()
+            if payload:
+                r['payload'] = payload
+            else:
+                r['payload'] = {'success': True}
+            logger.debug('response payload: %s', str(r['payload']))
+        except ConnectedHomeCall.ConnectedHomeException as e:
+            logger.exception('handler failed: %s, %s', e.error_name, e.payload)
+            self.response_name = e.error_name
+            r['payload'] = e.payload
+        except Exception:
+            logger.exception('handler failed unexpectedly')
+            self.response_name = 'DriverInternalError'
+            r['payload'] = {}
 
-def handle(event):
-    def inner(func):
-        handlers[event] = func
-        return func
-    return inner
-
-
-@handle('HealthCheckRequest')
-def handle_health_check(ha, payload):
-    r = {}
-    r['header'] = {'namespace': 'Alexa.ConnectedHome.System',
-                   'messageId': str(uuid4()),
-                   'name': 'HealthCheckResponse',
-                   'payloadVersion': '2'}
-    try:
-        ha.get('states')
-        r['payload'] = {'isHealthy': True}
-    except Exception as e:
-        logger.exception('HealthCheckRequest failed')
-        r['payload'] = {'isHealthy': False, 'description': str(e)}
-    finally:
+        r['header'] = {'namespace': self.namespace,
+                       'messageId': str(uuid4()),
+                       'name': self.response_name,
+                       'payloadVersion': '2'}
         return r
 
 
-@handle('DiscoverAppliancesRequest')
-def handle_discover_appliances(ha, payload):
-    r = {}
-    r['header'] = {'namespace': 'Alexa.ConnectedHome.Discovery',
-                   'name': 'DiscoverAppliancesResponse',
-                   'messageId': str(uuid4()),
-                   'payloadVersion': '2'}
-    try:
-        r['payload'] = {'discoveredAppliances': discover_appliances(ha)}
-    except Exception:
-        logger.exception('DiscoverAppliancesRequest failed')
-        # v2 documentation is unclear as to what should be returned here if
-        # discovery fails, so in the mean-time, just return 0 devices and log
-        # the error
-        r['payload'] = {'discoveredAppliances': {}}
-    finally:
-        return r
+class Alexa(object):
+    class ConnectedHome(object):
+        class System(ConnectedHomeCall):
+            def HealthCheckRequest(self):
+                try:
+                    self.ha.get('states')
+                    return {'isHealthy': True}
+                except Exception as e:
+                    logger.exception('HealthCheckRequest failed')
+                    return {'isHealthy': False, 'description': str(e)}
+
+        class Discovery(ConnectedHomeCall):
+            def DiscoverAppliancesRequest(self):
+                try:
+                    return {'discoveredAppliances':
+                            discover_appliances(self.ha)}
+                except Exception:
+                    logger.exception('DiscoverAppliancesRequest failed')
+                    # v2 documentation is unclear as to what should be returned
+                    # here if discovery fails, so in the mean-time, just return
+                    # 0 devices and log the error
+                    return {'discoveredAppliances': {}}
+
+        class Control(ConnectedHomeCall):
+            def __init__(self, namespace, name, ha, payload):
+                super(Alexa.ConnectedHome.Control, self).__init__(
+                        namespace, name, ha, payload)
+                self.response_name = name.replace('Request', 'Confirmation')
+
+            def TurnOnRequest(self):
+                self.entity.turn_on()
+
+            def TurnOffRequest(self):
+                self.entity.turn_off()
+
+            def SetPercentageRequest(self):
+                percentage = self.payload['percentageState']['value']
+                self.entity.set_percentage(percentage)
+
+            def handle_percentage_adj(self, deltaValue):
+                current = self.entity.get_percentage()
+                new = current + deltaValue
+
+                # So this looks weird, but the relative adjustments seem to
+                # always be +/- 25%, which means depending on the current
+                # brightness we could over-/undershoot the acceptable range.
+                # Instead, if we're not currently saturated, clamp the desired
+                # brightness to the allowed brightness.
+                if current != 100 and current != 0:
+                    if new < 0:
+                        new = 0
+                    elif new > 100:
+                        new = 100
+
+                if new > 100 or new < 0:
+                    raise ConnectedHomeCall.ValueOutOfRangeError(0, 100)
+
+                self.entity.set_percentage(new)
+
+            def IncrementPercentageRequest(self):
+                deltaValue = self.payload['deltaPercentage']['value']
+                return self.handle_percentage_adj(deltaValue)
+
+            def DecrementPercentageRequest(self):
+                deltaValue = -self.payload['deltaPercentage']['value']
+                return self.handle_percentage_adj(deltaValue)
+
+            def handle_color_temperature_adj(self, op):
+                current = self.entity.get_color_temperature()
+                new = op(current, 500)
+                self.entity.set_color_temperature(new)
+                return {'achievedState': {'colorTemperature': {'value': new}}}
+
+            def IncrementColorTemperatureRequest(self):
+                return self.handle_color_temperature_adj(operator.add)
+
+            def DecrementColorTemperatureRequest(self):
+                return self.handle_color_temperature_adj(operator.sub)
+
+            def SetColorTemperatureRequest(self):
+                temp = self.payload['colorTemperature']['value']
+                self.entity.set_color_temperature(temp)
+                return {'achievedState': {'colorTemperature': {'value': temp}}}
+
+            def handle_temperature_adj(self, op=None):
+                state = self.ha.get('states/' + self.entity.entity_id)
+                unit = state['attributes']['unit_of_measurement']
+                min_temp = convert_temp(state['attributes']['min_temp'], unit)
+                max_temp = convert_temp(state['attributes']['max_temp'], unit)
+
+                temperature, mode = self.entity.get_temperature(state)
+
+                if op is not None and 'deltaTemperature' in self.payload:
+                    new = op(temperature,
+                             float(self.payload['deltaTemperature']['value']))
+                    # Clamp the allowed temperature for relative adjustments
+                    if temperature != max_temp and temperature != min_temp:
+                        if new < min_temp:
+                            new = min_temp
+                        elif new > max_temp:
+                            new = max_temp
+                else:
+                    new = float(self.payload['targetTemperature']['value'])
+
+                if new > max_temp or new < min_temp:
+                    raise ConnectedHomeCall.ValueOutOfRangeError(min_temp,
+                                                                 max_temp)
+
+                # Only 3 allowed values for mode in this response
+                if mode not in ['AUTO', 'COOL', 'HEAT']:
+                    current = self.entity.get_current_temperature(state)
+                    mode = 'COOL' if current >= new else 'HEAT'
+
+                self.entity.set_temperature(new, mode.lower(), state)
+
+                return {'targetTemperature': {'value': new},
+                        'temperatureMode': {'value': mode},
+                        'previousState': {
+                            'targetTemperature': {'value': temperature},
+                            'mode': {'value': mode}}}
+
+            def SetTargetTemperatureRequest(self):
+                return self.handle_temperature_adj()
+
+            def IncrementTargetTemperatureRequest(self):
+                return self.handle_temperature_adj(operator.add)
+
+            def DecrementTargetTemperatureRequest(self):
+                return self.handle_temperature_adj(operator.sub)
+
+            def SetLockStateRequest(self):
+                self.entity.set_lock_state(self.payload["lockState"])
+                return {'lockState': self.payload["lockState"]}
+
+            def SetColorRequest(self):
+                self.entity.set_color(self.payload['color']['hue'],
+                                      self.payload['color']['saturation'],
+                                      self.payload['color']['brightness'])
+                return {'achievedState': {'color': self.payload['color']}}
+
+        class Query(ConnectedHomeCall):
+            def __init__(self, namespace, name, ha, payload):
+                super(Alexa.ConnectedHome.Query, self).__init__(
+                        namespace, name, ha, payload)
+
+            def GetTemperatureReadingRequest(self):
+                temperature = self.entity.get_current_temperature()
+                return {'temperatureReading': {'value': temperature}}
+
+            def GetTargetTemperatureRequest(self):
+                temperature, mode = self.entity.get_temperature()
+                payload = {'targetTemperature': {'value': temperature},
+                           'temperatureMode': {'value': mode}}
+                if mode not in ['AUTO', 'COOL', 'HEAT', 'OFF']:
+                    payload['temperatureMode'] = {
+                        'value': 'CUSTOM',
+                        'friendlyName': mode.replace('_', ' ').title()}
+                return payload
+
+            def GetLockStateRequest(self):
+                lock_state = self.entity.get_lock_state().upper()
+                return {'lockState': lock_state}
+
+
+def invoke(namespace, name, ha, context):
+    class allowed(object):
+        Alexa = Alexa
+    make_class = operator.attrgetter(namespace)
+    obj = make_class(allowed)(namespace, name, ha, context)
+    return obj.invoke(name)
 
 
 def discover_appliances(ha):
@@ -176,112 +336,12 @@ def discover_appliances(ha):
             is_skipped_entity(x)]
 
 
-def control_response(name):
-    def inner(func):
-        def response_wrapper(ha, payload):
-            r = {}
-            r['header'] = {'namespace': 'Alexa.ConnectedHome.Control',
-                           'name': name,
-                           'messageId': str(uuid4()),
-                           'payloadVersion': '2'}
-            try:
-                response_payload = func(ha, payload) or {'success': True}
-                r['payload'] = response_payload
-                return r
-            except SmartHomeException as e:
-                return e.r
-            except Exception as e:
-                logger.exception('%s handler failed' % name)
-                return SmartHomeException().r
-        return response_wrapper
-    return inner
-
-
-def payload_to_entity(payload):
-    return payload['appliance']['additionalApplianceDetails']['entity_id']
-
-
 def supported_features(payload):
     try:
         details = 'additionalApplianceDetails'
         return payload['appliance'][details]['supported_features']
     except:
         return 0
-
-
-@handle('TurnOnRequest')
-@control_response('TurnOnConfirmation')
-def handle_turn_on(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
-    e.turn_on()
-
-
-@handle('TurnOffRequest')
-@control_response('TurnOffConfirmation')
-def handle_turn_off(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
-    e.turn_off()
-
-
-@handle('SetPercentageRequest')
-@control_response('SetPercentageConfirmation')
-def handle_set_percentage(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
-    e.set_percentage(payload['percentageState']['value'])
-
-
-def handle_percentage_adj(ha, payload, op):
-    e = mk_entity(ha, payload_to_entity(payload))
-    current = e.get_percentage()
-    new = op(current, payload['deltaPercentage']['value'])
-
-    # So this looks weird, but the relative adjustments seem to always be
-    # +/- 25%, which means depending on the current brightness we could
-    # over-/undershoot the acceptable range. Instead, if we're not
-    # currently saturated, clamp the desired brightness to the allowed
-    # brightness.
-    if current != 100 and current != 0:
-        if new < 0:
-            new = 0
-        elif new > 100:
-            new = 100
-
-    if new > 100 or new < 0:
-        raise ValueOutOfRangeError(0, 100)
-
-    e.set_percentage(new)
-
-
-@handle('IncrementPercentageRequest')
-@control_response('IncrementPercentageConfirmation')
-def handle_increment_percentage(ha, payload):
-    return handle_percentage_adj(ha, payload, operator.add)
-
-
-@handle('DecrementPercentageRequest')
-@control_response('DecrementPercentageConfirmation')
-def handle_decrement_percentage(ha, payload):
-    return handle_percentage_adj(ha, payload, operator.sub)
-
-
-def handle_color_temperature_adj(ha, payload, op):
-    e = mk_entity(ha, payload_to_entity(payload))
-    current = e.get_color_temperature()
-    new = op(current, 500)
-    e.set_color_temperature(new)
-    return {'achievedState': {'colorTemperature': {'value': new}}}
-
-
-@handle('IncrementColorTemperatureRequest')
-@control_response('IncrementColorTemperatureConfirmation')
-def handle_increment_colortemp(ha, payload):
-    return handle_color_temperature_adj(ha, payload, operator.add)
-
-
-@handle('DecrementColorTemperatureRequest')
-@control_response('DecrementColorTemperatureConfirmation')
-def handle_decrement_colortemp(ha, payload):
-    return handle_color_temperature_adj(ha, payload, operator.sub)
 
 
 def convert_temp(temp, from_unit=u'°C', to_unit=u'°C'):
@@ -291,133 +351,6 @@ def convert_temp(temp, from_unit=u'°C', to_unit=u'°C'):
         return temp * 1.8 + 32
     else:
         return (temp - 32) / 1.8
-
-
-@handle('GetTemperatureReadingRequest')
-def handle_get_temperature_reading(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
-    temperature = e.get_current_temperature()
-
-    r = {}
-    r['header'] = {'namespace': 'Alexa.ConnectedHome.Query',
-                   'messageId': str(uuid4()),
-                   'name': 'GetTemperatureReadingResponse',
-                   'payloadVersion': '2'}
-    r['payload'] = {'temperatureReading': {'value': temperature}}
-    return r
-
-
-@handle('GetTargetTemperatureRequest')
-def handle_get_target_temperature(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
-    temperature, mode = e.get_temperature()
-
-    r = {}
-    r['header'] = {'namespace': 'Alexa.ConnectedHome.Query',
-                   'messageId': str(uuid4()),
-                   'name': 'GetTargetTemperatureResponse',
-                   'payloadVersion': '2'}
-    r['payload'] = {'targetTemperature': {'value': temperature},
-                    'temperatureMode': {'value': mode}}
-    if mode not in ['AUTO', 'COOL', 'HEAT', 'OFF']:
-        r['payload']['temperatureMode'] = {
-            'value': 'CUSTOM',
-            'friendlyName': mode.replace('_', ' ').title()}
-    return r
-
-
-def handle_temperature_adj(ha, payload, op=None):
-    e = mk_entity(ha, payload_to_entity(payload))
-    state = ha.get('states/' + e.entity_id)
-    unit = state['attributes']['unit_of_measurement']
-    min_temp = convert_temp(state['attributes']['min_temp'], unit)
-    max_temp = convert_temp(state['attributes']['max_temp'], unit)
-
-    temperature, mode = e.get_temperature(state)
-
-    if op is not None and 'deltaTemperature' in payload:
-        new = op(temperature, float(payload['deltaTemperature']['value']))
-        # Clamp the allowed temperature for relative adjustments
-        if temperature != max_temp and temperature != min_temp:
-            if new < min_temp:
-                new = min_temp
-            elif new > max_temp:
-                new = max_temp
-    else:
-        new = float(payload['targetTemperature']['value'])
-
-    if new > max_temp or new < min_temp:
-        raise ValueOutOfRangeError(min_temp, max_temp)
-
-    # Only 3 allowed values for mode in this response
-    if mode not in ['AUTO', 'COOL', 'HEAT']:
-        current = e.get_current_temperature(state)
-        mode = 'COOL' if current >= new else 'HEAT'
-
-    e.set_temperature(new, mode.lower(), state)
-
-    return {'targetTemperature': {'value': new},
-            'temperatureMode': {'value': mode},
-            'previousState': {
-                'targetTemperature': {'value': temperature},
-                'mode': {'value': mode}}}
-
-
-@handle('SetTargetTemperatureRequest')
-@control_response('SetTargetTemperatureConfirmation')
-def handle_set_target_temperature(ha, payload):
-    return handle_temperature_adj(ha, payload)
-
-
-@handle('IncrementTargetTemperatureRequest')
-@control_response('IncrementTargetTemperatureConfirmation')
-def handle_increment_target_temperature(ha, payload):
-    return handle_temperature_adj(ha, payload, operator.add)
-
-
-@handle('DecrementTargetTemperatureRequest')
-@control_response('DecrementTargetTemperatureConfirmation')
-def handle_decrement_target_temperature(ha, payload):
-    return handle_temperature_adj(ha, payload, operator.sub)
-
-
-@handle('GetLockStateRequest')
-def handle_get_lock_state(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
-    lock_state = e.get_lock_state().upper()
-
-    r = {}
-    r['header'] = {'namespace': 'Alexa.ConnectedHome.Query',
-                   'messageId': str(uuid4()),
-                   'name': 'GetLockStateResponse',
-                   'payloadVersion': '2'}
-    r['payload'] = {'lockState': lock_state}
-    return r
-
-
-@handle('SetLockStateRequest')
-@control_response('SetLockStateConfirmation')
-def handle_set_lock_state(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload))
-    e.set_lock_state(payload["lockState"])
-    return {'lockState': payload["lockState"]}
-
-
-@handle('SetColorRequest')
-@control_response('SetColorConfirmation')
-def handle_set_color(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
-    e.set_color(payload['color']['hue'], payload['color']['saturation'],
-                payload['color']['brightness'])
-    return {'achievedState': {'color': payload['color']}}
-
-
-@handle('SetColorTemperatureRequest')
-@control_response('SetColorTemperatureConfirmation')
-def handle_set_color_temperature(ha, payload):
-    e = mk_entity(ha, payload_to_entity(payload), supported_features(payload))
-    e.set_color_temperature(payload['colorTemperature']['value'])
-    return {'achievedState': {'colorTemperature': payload['colorTemperature']}}
 
 
 class Entity(object):
@@ -715,4 +648,5 @@ def event_handler(event, context):
                  str({k: v for k, v in payload.items()
                      if k != u'accessToken'}))
 
-    return handlers[name](ha, payload)
+    return invoke(event['header']['namespace'], event['header']['name'],
+                  ha, payload)
