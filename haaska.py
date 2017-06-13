@@ -299,6 +299,8 @@ def discover_appliances(ha):
 
     def is_skipped_entity(x):
         attr = x['attributes']
+        if 'haaska_hidden' not in attr and 'hidden' not in attr:
+            return ha.config.hidden_default
         return (('haaska_hidden' in attr and attr['haaska_hidden']) or
                 ('hidden' in attr and attr['hidden']))
 
@@ -589,7 +591,9 @@ DOMAINS = {
     'scene': SceneEntity,
     'light': LightEntity,
     'media_player': MediaPlayerEntity,
-    'climate': ClimateEntity
+    'climate': ClimateEntity,
+    'alert': ToggleEntity,
+    'automation': ToggleEntity
 }
 
 
@@ -619,6 +623,7 @@ class Configuration(object):
         opts['entity_suffixes'].update(self.get(['entity_suffixes'],
                                        default=default_entity_suffixes))
 
+        opts['hidden_default'] = self.get(['hidden_default'], default=False)
         opts['debug'] = self.get(['debug'], default=False)
         self.opts = opts
 
