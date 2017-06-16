@@ -7,6 +7,8 @@ haaska implements a bridge between a [Home Assistant](https://home-assistant.io)
 
 | Type           | On/Off Supported? | Dim Supported? |
 |----------------|-------------------|----------------|
+| Alerts         | Yes               | No             |
+| Automations    | Yes               | No             |
 | Climate        | Yes               | Temperature    |
 | Cover          | Yes               | No             |
 | Fans           | Yes               | Yes (speed)    |
@@ -59,17 +61,20 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
 
 ### Config Values
 
-| Key                   | Example Value                                                                                                      | Required? | Notes                                                                                        |
-|-----------------------|--------------------------------------------------------------------------------------------------------------------|-----------|----------------------------------------------------------------------------------------------|
-| `url`.                | `https://demo.home-assistant.io.`.                                                                                 | **Yes**   | The API endpoint of your Home Assistant instance.                                            |
-| `password `           | `securepassword`                                                                                                   | **Yes**   | The API password of your Home Assistant instance.                                            |
-| `ssl_verify`          | `mycert.crt`                                                                                                       | No        | This will be passed as the `verify` parameter for all requests; see [here](http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification) for options |
-| `allowed_domains`     | `["cover", "garage_door", "group", "input_boolean", "light", "lock", "media_player", "scene", "script", "switch"]` | No        | A JSON array of entity types to expose to Alexa. If not provided, the example value is used. |
+| Key                   | Example Value                                                                                                                                                               | Required? | Notes                                                                                                                                                                   |
+|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `url`                 | `https://home-assistant.io/demo/`                                                                                                                                           | **Yes**   | The API endpoint of your Home Assistant instance.                                                                                                                       |
+| `password `           | `securepassword`                                                                                                                                                            | **Yes**   | The API password of your Home Assistant instance.                                                                                                                       |
+| `ssl_verify`          | `mycert.crt`                                                                                                                                                                | No        | This will be passed as the `verify` parameter for all requests; see [here](http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification) for options. |
+| `expose_by_default`   | `true`                                                                                                                                                                      | No        | Whether or not entities should be exposed to Alexa by default. If not specified, this defaults to true.                                                                 |
+| `exposed_domains`     | `["alert", "automation", "climate", "cover", "fan", "garage_door", "group", "input_boolean", "input_slider", "light", "lock", "media_player", "scene", "script", "switch"]` | No        | A JSON array of entity types to expose to Alexa. If not provided, the example value is used.                                                                            |
+| `entity_suffixes`     | `{"group": "Group", "scene": "Scene"}`                                                                                                                                      | No        | A JSON object of entity suffixes to expose to Alexa. If not provided, the example value is used.                                                                        |
+| `debug`               | `false`                                                                                                                                                                     | No        | When enabled, the haaska log level will be set to debug. If not provided, this defaults to false.                                                                       |
 
 ## Usage
-After completing setup of haaska, tell Alexa: "Alexa, discover my devices". If there is an issue you can go to `Menu / Smart Home` in the [web](http://echo.amazon.com/#smart-home) or mobile app and have Alexa forget all devices, and then do the discovery again. To prevent duplicate devices from appearing, ensure that the `emulated_hue` component of Home Assistant is not enabled.
+After completing setup of haaska, tell Alexa: *"Alexa, discover my devices."* If there is an issue you can go to `Menu / Smart Home` in the [web](http://echo.amazon.com/#smart-home) or mobile app and have Alexa forget all devices, and then do the discovery again. To prevent duplicate devices from appearing, ensure that the `emulated_hue` component of Home Assistant is not enabled.
 
-Then you can say "Alexa, Turn on the office light" or whatever name you have given your configured devices.
+Then you can say *"Alexa, turn on the office light"* or whatever name you have given your configured devices.
 
 Here is the table of possible commands to use to tell Alexa what you want to do:
 
@@ -105,7 +110,7 @@ To see what Alexa thinks you said, you can see the command history under `Menu /
 
 To view or remove devices that Alexa knows about, you can go to `Menu / Smart Home` in the [web](http://echo.amazon.com/#smart-home) or mobile app.
 
-(Thanks to [ha-bridge](https://github.com/bwssytems/ha-bridge) for originally writing this section!)
+(Thanks to [@dale3h](https://www.reddit.com/r/amazonecho/comments/4gaf05/discovery_a_lot_more_smart_home_action_phrases/) for originally discovering these!)
 
 ## Upgrading
 

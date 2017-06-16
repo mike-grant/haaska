@@ -1,24 +1,14 @@
 {
-  "entity_suffixes": {
-    "climate": "",
-    "group": "Group",
-    "script": "",
-    "media_player": "",
-    "lock": "",
-    "cover": "",
-    "garage_door": "",
-    "scene": "Scene",
-    "switch": "",
-    "fan": "",
-    "light": "",
-    "input_boolean": "",
-    "input_slider": ""
-  },
-  "allowed_domains": [
+  "url": "http://localhost:8123/api",
+  "password": "",
+  "ssl_verify": false,
+  "expose_by_default": true,
+  "exposed_domains": [
+    "alert",
+    "automation",
     "climate",
     "cover",
     "fan",
-    "garage_door",
     "group",
     "input_boolean",
     "input_slider",
@@ -29,8 +19,21 @@
     "script",
     "switch"
   ],
-  "url": "http://localhost:8123/api",
-  "debug": false,
-  "ssl_verify": false,
-  "password": ""
+  "entity_suffixes": {
+    "alert": "",
+    "automation": "",
+    "climate": "",
+    "cover": "",
+    "fan": "",
+    "group": "Group",
+    "input_boolean": "",
+    "input_slider": "",
+    "light": "",
+    "lock": "",
+    "media_player": "",
+    "scene": "Scene",
+    "script": "",
+    "switch": ""
+  },
+  "debug": false
 }

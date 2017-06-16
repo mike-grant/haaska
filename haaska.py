@@ -295,12 +295,12 @@ def discover_appliances(ha):
         return x['entity_id'].split('.', 1)[0]
 
     def is_supported_entity(x):
-        return entity_domain(x) in ha.config.allowed_domains
+        return entity_domain(x) in ha.config.exposed_domains
 
-    def is_skipped_entity(x):
+    def is_exposed_entity(x):
         attr = x['attributes']
         if 'haaska_hidden' not in attr and 'hidden' not in attr:
-            return ha.config.hidden_default
+            return ha.config.expose_by_default
         return (('haaska_hidden' in attr and attr['haaska_hidden']) or
                 ('hidden' in attr and attr['hidden']))
 
@@ -334,8 +334,8 @@ def discover_appliances(ha):
         return o
 
     states = ha.get('states')
-    return [mk_appliance(x) for x in states if is_supported_entity(x) and not
-            is_skipped_entity(x)]
+    return [mk_appliance(x) for x in states if is_supported_entity(x) and
+            is_exposed_entity(x)]
 
 
 def supported_features(payload):
@@ -614,8 +614,8 @@ class Configuration(object):
                                default='http://localhost:8123/api')
         opts['ssl_verify'] = self.get(['ssl_verify', 'ha_cert'], default=True)
         opts['password'] = self.get(['password', 'ha_passwd'], default='')
-        opts['allowed_domains'] = \
-            sorted(self.get(['allowed_domains', 'ha_allowed_entities'],
+        opts['exposed_domains'] = \
+            sorted(self.get(['exposed_domains', 'ha_allowed_entities'],
                             default=DOMAINS.keys()))
 
         default_entity_suffixes = {'group': 'Group', 'scene': 'Scene'}
@@ -623,7 +623,7 @@ class Configuration(object):
         opts['entity_suffixes'].update(self.get(['entity_suffixes'],
                                        default=default_entity_suffixes))
 
-        opts['hidden_default'] = self.get(['hidden_default'], default=False)
+        opts['expose_by_default'] = self.get(['expose_by_default'], default=True)
         opts['debug'] = self.get(['debug'], default=False)
         self.opts = opts
 
