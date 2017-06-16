@@ -623,7 +623,8 @@ class Configuration(object):
         opts['entity_suffixes'].update(self.get(['entity_suffixes'],
                                        default=default_entity_suffixes))
 
-        opts['expose_by_default'] = self.get(['expose_by_default'], default=True)
+        opts['expose_by_default'] = self.get(['expose_by_default'],
+                                             default=True)
         opts['debug'] = self.get(['debug'], default=False)
         self.opts = opts
 
