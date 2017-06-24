@@ -1,5 +1,23 @@
 # haaska Changelog
 
+## [0.3] - 2017-06-24
+### Added
+- There's now a `discover` target in the `Makefile`, which will send a discovery
+  request to your running haaska instance using the AWS CLI and print the
+results using `jq`. This is helpful for debugging configuration changes.
+- Color temperature can now be incremented and decremented ("Alexa, make lamp
+cooler", "Alexa, make lamp warmer").
+- `input_slider` entities are now supported
+- There's now a configuration option to hide Home-Assistant entities by default.
+
+### Changed
+- haaska will no longer wait for a response from a POST to Home-Assistant. This
+reduces the delay between issuing a command and getting a confirmation from
+Alexa on some devices.
+- haaska will now accept numbers encoded as strings for thermostat commands.
+This makes haaska a bit more robust, since these commands seem to have
+inconsistent types at times.
+
 ## [0.2] - 2017-05-07
 ### Added
 - Support for controlling the color ("Alexa, turn kitchen green") and color
@@ -23,5 +41,6 @@ to enable more verbose logging to CloudWatch
 First tagged release.
 
 [unreleased]: https://github.com/auchter/haaska/tree/dev
+[0.2]: https://github.com/auchter/haaska/tree/0.3
 [0.2]: https://github.com/auchter/haaska/tree/0.2
 [0.1]: https://github.com/auchter/haaska/tree/0.1
