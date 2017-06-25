@@ -299,10 +299,12 @@ def discover_appliances(ha):
 
     def is_exposed_entity(x):
         attr = x['attributes']
-        if 'haaska_hidden' not in attr and 'hidden' not in attr:
+        if 'haaska_hidden' in attr:
+            return not attr['haaska_hidden']
+        elif 'hidden' in attr:
+            return not attr['hidden']
+        else:
             return ha.config.expose_by_default
-        return (('haaska_hidden' in attr and attr['haaska_hidden']) or
-                ('hidden' in attr and attr['hidden']))
 
     def mk_appliance(x):
         features = 0
