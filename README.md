@@ -72,7 +72,7 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
 | `debug`               | `false`                                                                                                                                                                     | No        | When enabled, the haaska log level will be set to debug. If not provided, this defaults to false.                                                                       |
 
 ## Usage
-After completing setup of haaska, tell Alexa: *"Alexa, discover my devices."* If there is an issue you can go to `Menu / Smart Home` in the [web](http://echo.amazon.com/#smart-home) or mobile app and have Alexa forget all devices, and then do the discovery again. To prevent duplicate devices from appearing, ensure that the `emulated_hue` component of Home Assistant is not enabled.
+After completing setup of haaska, associate the Skill with Alexa by browsing to 'Skills' in the Alexa App (Mobile or Web) and clicking 'Your Skills".  Find your skill, click on it, and click enable.  Go though the Amazon authentication flow and when finished, click on Discover Devices or tell Alexa: *"Alexa, discover my devices."* If there is an issue you can go to `Menu / Smart Home` in the [web](http://echo.amazon.com/#smart-home) or mobile app and have Alexa forget all devices, and then do the discovery again. To prevent duplicate devices from appearing, ensure that the `emulated_hue` component of Home Assistant is not enabled.
 
 Then you can say *"Alexa, turn on the office light"* or whatever name you have given your configured devices.
 
