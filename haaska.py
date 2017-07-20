@@ -41,9 +41,13 @@ class HomeAssistant(object):
     def __init__(self, config):
         self.config = config
         self.url = config.url.rstrip('/')
+        agent_str = 'Home Assistant Alexa Smart Home Skill - %s - %s'
+        agent_fmt = agent_str % (os.environ['AWS_DEFAULT_REGION'],
+                                 requests.utils.default_user_agent())
         self.session = requests.Session()
         self.session.headers = {'x-ha-access': config.password,
-                                'content-type': 'application/json'}
+                                'content-type': 'application/json',
+                                'User-Agent': agent_fmt}
         self.session.verify = config.ssl_verify
 
     def build_url(self, relurl):
