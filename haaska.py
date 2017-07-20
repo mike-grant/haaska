@@ -605,11 +605,14 @@ def mk_entity(ha, entity_id, supported_features=0):
 
 
 class Configuration(object):
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, optsDict=None):
         self._json = {}
         if filename is not None:
             with open(filename) as f:
                 self._json = json.load(f)
+
+        if optsDict is not None:
+            self._json = optsDict
 
         opts = {}
         opts['url'] = self.get(['url', 'ha_url'],
