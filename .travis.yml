@@ -16,4 +16,6 @@ script:
   - "cd test && nosetests -s"
 after_script:
   - "kill -9 $HASS_PID"
+env:
+  - AWS_DEFAULT_REGION=TRAVIS-CI
 
