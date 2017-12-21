@@ -100,3 +100,4 @@ config/*
 build
 .DS_Store
 haaska.zip
+/.vs
