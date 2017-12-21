@@ -349,7 +349,7 @@ def supported_features(payload):
     try:
         details = 'additionalApplianceDetails'
         return payload['appliance'][details]['supported_features']
-    except:
+    except Exception:
         return 0
 
 
