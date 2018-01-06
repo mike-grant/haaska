@@ -79,7 +79,7 @@ class ConnectedHomeCall(object):
     def __init__(self, namespace, name, ha, payload):
         self.namespace = namespace
         self.name = name
-        self.response_name = self.name.replace('Request', 'Response')
+        self.response_name = self.name + '.Response'
         self.ha = ha
         self.payload = payload
         self.entity = None
@@ -99,31 +99,38 @@ class ConnectedHomeCall(object):
 
     def invoke(self, name):
         logger.debug('invoking %s %s', self.namespace, name)
-        r = {}
+        r = {'event': {}}
         try:
             payload = operator.attrgetter(name)(self)()
             if payload:
-                r['payload'] = payload
+                r['event']['payload'] = payload
             else:
-                r['payload'] = {'success': True}
-            logger.debug('response payload: %s', str(r['payload']))
+                r['event']['payload'] = {'success': True}
+            logger.debug('response payload: %s', str(r['event']))
         except ConnectedHomeCall.ConnectedHomeException as e:
             logger.exception('handler failed: %s, %s', e.error_name, e.payload)
             self.response_name = e.error_name
-            r['payload'] = e.payload
+            r['event']['payload'] = e.payload
         except Exception:
             logger.exception('handler failed unexpectedly')
             self.response_name = 'DriverInternalError'
-            r['payload'] = {}
+            r['event']['payload'] = {}
 
-        r['header'] = {'namespace': self.namespace,
+        r['event']['header'] = {'namespace': self.namespace,
                        'messageId': str(uuid4()),
                        'name': self.response_name,
-                       'payloadVersion': '2'}
+                       'payloadVersion': '3'}
         return r
 
 
 class Alexa(object):
+    class Discovery(ConnectedHomeCall):
+        def Discover(self):
+            try:
+                return {'endpoints': discover_appliances(self.ha)}
+            except Exception:
+                logger.exception('v3 DiscoverAppliancesRequest failed')
+
     class ConnectedHome(object):
         class System(ConnectedHomeCall):
             def HealthCheckRequest(self):
@@ -287,11 +294,11 @@ class Alexa(object):
                 return {'lockState': lock_state}
 
 
-def invoke(namespace, name, ha, context):
+def invoke(namespace, name, ha, payload):
     class allowed(object):
         Alexa = Alexa
     make_class = operator.attrgetter(namespace)
-    obj = make_class(allowed)(namespace, name, ha, context)
+    obj = make_class(allowed)(namespace, name, ha, payload)
     return obj.invoke(name)
 
 
@@ -318,10 +325,10 @@ def discover_appliances(ha):
         entity = mk_entity(ha, x['entity_id'], features)
         o = {}
         # this needs to be unique and has limitations on allowed characters:
-        o['applianceId'] = sha1(x['entity_id'].encode('utf-8')).hexdigest()
+        o['endpointId'] = sha1(x['entity_id'].encode('utf-8')).hexdigest()
         o['manufacturerName'] = 'Unknown'
         o['modelName'] = 'Unknown'
-        o['version'] = 'Unknown'
+        o['displayCategories'] = ['SWITCH']
         if 'haaska_name' in x['attributes']:
             o['friendlyName'] = x['attributes']['haaska_name']
         else:
@@ -330,14 +337,11 @@ def discover_appliances(ha):
             if suffix != '':
                 o['friendlyName'] += ' ' + suffix
         if 'haaska_desc' in x['attributes']:
-            o['friendlyDescription'] = x['attributes']['haaska_desc']
+            o['description'] = x['attributes']['haaska_desc']
         else:
-            o['friendlyDescription'] = 'Home Assistant ' + \
+            o['description'] = 'Home Assistant ' + \
                 entity_domain(x).replace('_', ' ').title()
-        o['isReachable'] = True
-        o['actions'] = entity.get_actions()
-        o['additionalApplianceDetails'] = {'entity_id': x['entity_id'],
-                                           'supported_features': features}
+        o['capabilities'] = entity.get_capabilities()
         return o
 
     states = ha.get('states')
@@ -372,7 +376,144 @@ class Entity(object):
     def _call_service(self, service, data={}):
         data['entity_id'] = self.entity_id
         self.ha.post('services/' + service, data)
+    def get_capabilities(self):
+        capabilities = []
+        capabilities.append(
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa",
+                "version": "3"
+            })
 
+        if hasattr(self, 'turn_on') or hasattr(self, 'turn_off'):
+            capabilities.append(
+                {
+                    "type": "AlexaInterface",
+                    "interface": "Alexa.PowerController",
+                    "version": "3",
+                    "properties": {
+                        "supported": [
+                            {
+                                "name": "powerState"
+                            }
+                        ],
+                        "proactivelyReported": True,
+                        "retrievable": True
+                    }
+                })
+
+        if hasattr(self, 'set_percentage') or hasattr(self, 'get_percentage'):
+            capabilities.append(
+                {
+                    "type": "AlexaInterface",
+                    "interface": "Alexa.PercentageController",
+                    "version": "3",
+                    "properties": {
+                        "supported": [
+                            {
+                                "name": "percentage"
+                            }
+                        ],
+                        "proactivelyReported": True,
+                        "retrievable": True
+                    }
+                })
+
+
+        if hasattr(self, 'get_current_temperature') or hasattr(self, 'get_temperature'):
+            capabilities.append(
+                {
+                    "type": "AlexaInterface",
+                    "interface": "Alexa.TemperatureSensor",
+                    "version": "3",
+                    "properties": {
+                        "supported": [
+                            {
+                                "name": "temperature"
+                            }
+                        ],
+                        "proactivelyReported": True,
+                        "retrievable": True
+                    }
+                })
+
+
+        if hasattr(self, 'set_temperature'):
+            capabilities.append(
+                {
+                    "type": "AlexaInterface",
+                    "interface": "Alexa.ThermostatController",
+                    "version": "3",
+                    "properties": {
+                        "supported": [
+                            {
+                                "name": "upperSetpoint"
+                            },
+                            {
+                                "name": "lowerSetpoint"
+                            },
+                            {
+                                "name": "thermostatMode"
+                            }
+                        ],
+                        "proactivelyReported": True,
+                        "retrievable": True
+                    }
+                })
+
+        if hasattr(self, 'get_lock_state') or hasattr(self, 'set_lock_state'):
+            capabilities.append(
+                {
+                    "type": "AlexaInterface",
+                    "interface": "Alexa.LockController",
+                    "version": "3",
+                    "properties": {
+                        "supported": [
+                            {
+                                "name": "lockState"
+                            }
+                        ],
+                        "proactivelyReported": True,
+                        "retrievable": True
+                    }
+                })
+
+        if self.entity_domain == "light":
+            if self.supported_features & LIGHT_SUPPORT_RGB_COLOR:
+                capabilities.append(
+                    {
+                        "type": "AlexaInterface",
+                        "interface": "Alexa.ColorController",
+                        "version": "3",
+                        "properties": {
+                            "supported": [
+                                {
+                                    "name": "color"
+                                }
+                            ],
+                            "proactivelyReported": True,
+                            "retrievable": True
+                        }
+                    })
+            if self.supported_features & LIGHT_SUPPORT_COLOR_TEMP:
+                capabilities.append(
+                    {
+                        "type": "AlexaInterface",
+                        "interface": "Alexa.ColorTemperatureController",
+                        "version": "3",
+                        "properties": {
+                            "supported": [
+                                {
+                                    "name": "colorTemperatureInKelvin"
+                                }
+                            ],
+                            "proactivelyReported": True,
+                            "retrievable": True
+                        }
+                    })
+
+        return capabilities
+    
     def get_actions(self):
         actions = []
 
@@ -650,19 +791,24 @@ class Configuration(object):
     def dump(self):
         return json.dumps(self.opts, indent=2, separators=(',', ': '))
 
-
+# Lambda entry point
 def event_handler(event, context):
     config = Configuration('config.json')
     if config.debug:
         logger.setLevel(logging.DEBUG)
     ha = HomeAssistant(config)
+    version = get_directive_version(event)
+    
+    if version == "3":
+        directive = event['directive']
+        namespace = directive['header']['namespace']
+        name = directive['header']['name']
+        payload = directive.get('payload')
 
-    name = event['header']['name']
-    payload = event['payload']
-
-    logger.debug('calling event handler for %s, payload: %s', name,
-                 str({k: v for k, v in payload.items()
-                     if k != u'accessToken'}))
-
-    return invoke(event['header']['namespace'], event['header']['name'],
-                  ha, payload)
+        logger.debug('calling v3 event handler for %s, payload: %s', name, str({k: v for k, v in payload.items()
+                         if k != u'accessToken'}))
+        
+        return invoke(namespace, name, ha, payload)
+    else:
+        logger.debug('calling v2 event handler')
+        return null
