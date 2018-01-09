@@ -27,7 +27,7 @@ import logging
 import operator
 import requests
 import colorsys
-from hashlib import sha1
+import datetime
 from uuid import uuid4
 
 logger = logging.getLogger()
@@ -76,16 +76,23 @@ class HomeAssistant(object):
 
 
 class ConnectedHomeCall(object):
-    def __init__(self, namespace, name, ha, payload):
+    def __init__(self, namespace, name, ha, payload, endpoint):
+        logger.debug('Building connected home call %s, %s, %s', namespace,
+                     name, payload)
         self.namespace = namespace
         self.name = name
         self.response_name = self.name + '.Response'
         self.ha = ha
         self.payload = payload
+        self.endpoint = endpoint
         self.entity = None
-        if 'appliance' in self.payload:
-            details = payload['appliance']['additionalApplianceDetails']
-            self.entity = mk_entity(ha, details['entity_id'])
+        self.context_properties = []
+        # if 'appliance' in self.payload:
+        #    details = payload['appliance']['additionalApplianceDetails']
+        #    self.entity = mk_entity(ha, details['entity_id'])
+        if self.endpoint and ('endpointId' in self.endpoint):
+            self.entity = mk_entity(ha, self.endpoint['endpointId']
+                                    .replace(':', '.'))
 
     class ConnectedHomeException(Exception):
         def __init__(self, name="DriverInternalError", payload={}):
@@ -117,9 +124,11 @@ class ConnectedHomeCall(object):
             r['event']['payload'] = {}
 
         r['event']['header'] = {'namespace': self.namespace,
-                       'messageId': str(uuid4()),
-                       'name': self.response_name,
-                       'payloadVersion': '3'}
+                                'messageId': str(uuid4()),
+                                'name': self.response_name,
+                                'payloadVersion': '3',
+                                'correlationToken': '123456'
+                                }
         return r
 
 
@@ -130,6 +139,29 @@ class Alexa(object):
                 return {'endpoints': discover_appliances(self.ha)}
             except Exception:
                 logger.exception('v3 DiscoverAppliancesRequest failed')
+
+    class PowerController(ConnectedHomeCall):
+        def TurnOn(self):
+            self.entity.turn_on()
+            self.context_properties.append({
+                "namespace": "Alexa.PowerController",
+                "name": "powerState",
+                "value": "ON",
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
+            pass
+
+        def TurnOff(self):
+            self.entity.turn_off()
+            self.context_properties.append({
+                "namespace": "Alexa.PowerController",
+                "name": "powerState",
+                "value": "OFF",
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
+            pass
 
     class ConnectedHome(object):
         class System(ConnectedHomeCall):
@@ -294,11 +326,13 @@ class Alexa(object):
                 return {'lockState': lock_state}
 
 
-def invoke(namespace, name, ha, payload):
+def invoke(namespace, name, ha, payload, endpoint):
     class allowed(object):
         Alexa = Alexa
     make_class = operator.attrgetter(namespace)
-    obj = make_class(allowed)(namespace, name, ha, payload)
+    logger.debug('Calling invoke %s, %s, %s, %s, %s', namespace, name, ha,
+                 payload, endpoint)
+    obj = make_class(allowed)(namespace, name, ha, payload, endpoint)
     return obj.invoke(name)
 
 
@@ -325,7 +359,7 @@ def discover_appliances(ha):
         entity = mk_entity(ha, x['entity_id'], features)
         o = {}
         # this needs to be unique and has limitations on allowed characters:
-        o['endpointId'] = sha1(x['entity_id'].encode('utf-8')).hexdigest()
+        o['endpointId'] = x['entity_id'].replace('.', ':')
         o['manufacturerName'] = 'Unknown'
         o['modelName'] = 'Unknown'
         o['displayCategories'] = ['SWITCH']
@@ -354,6 +388,7 @@ def supported_features(payload):
         details = 'additionalApplianceDetails'
         return payload['appliance'][details]['supported_features']
     except Exception:
+
         return 0
 
 
@@ -376,6 +411,7 @@ class Entity(object):
     def _call_service(self, service, data={}):
         data['entity_id'] = self.entity_id
         self.ha.post('services/' + service, data)
+
     def get_capabilities(self):
         capabilities = []
         capabilities.append(
@@ -419,7 +455,6 @@ class Entity(object):
                     }
                 })
 
-
         if hasattr(self, 'get_current_temperature') or hasattr(self, 'get_temperature'):
             capabilities.append(
                 {
@@ -436,7 +471,6 @@ class Entity(object):
                         "retrievable": True
                     }
                 })
-
 
         if hasattr(self, 'set_temperature'):
             capabilities.append(
@@ -513,7 +547,7 @@ class Entity(object):
                     })
 
         return capabilities
-    
+
     def get_actions(self):
         actions = []
 
@@ -747,6 +781,7 @@ DOMAINS = {
 
 def mk_entity(ha, entity_id, supported_features=0):
     entity_domain = entity_id.split('.', 1)[0]
+    logger.debug('Making entity w/ domain: %s', entity_domain)
     return DOMAINS[entity_domain](ha, entity_id, supported_features)
 
 
@@ -791,6 +826,319 @@ class Configuration(object):
     def dump(self):
         return json.dumps(self.opts, indent=2, separators=(',', ': '))
 
+
+def get_capabilities_from_v2_appliance(appliance):
+    model_name = appliance["modelName"]
+    if model_name == 'Smart Switch':
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.PowerController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "powerState"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            }
+        ]
+    elif model_name == "Smart Light":
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.PowerController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "powerState"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.ColorController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "color"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.ColorTemperatureController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "colorTemperatureInKelvin"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.BrightnessController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "brightness"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.PowerLevelController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "powerLevel"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.PercentageController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "percentage"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            }
+        ]
+    elif model_name == "Smart White Light":
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.PowerController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "powerState"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.ColorTemperatureController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "colorTemperatureInKelvin"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.BrightnessController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "brightness"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.PowerLevelController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "powerLevel"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.PercentageController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "percentage"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            }
+        ]
+    elif model_name == "Smart Thermostat":
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.ThermostatController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "targetSetpoint"},
+                        {"name": "thermostatMode"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.TemperatureSensor",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "temperature"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            }
+        ]
+    elif model_name == "Smart Thermostat Dual":
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.ThermostatController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "upperSetpoint"},
+                        {"name": "lowerSetpoint"},
+                        {"name": "thermostatMode"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            },
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.TemperatureSensor",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "temperature"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            }
+        ]
+    elif model_name == "Smart Lock":
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.LockController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "lockState"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            }
+        ]
+    elif model_name == "Smart Scene":
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.SceneController",
+                "version": "3",
+                "supportsDeactivation": False,
+                "proactivelyReported": True
+            }
+        ]
+    elif model_name == "Smart Activity":
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.SceneController",
+                "version": "3",
+                "supportsDeactivation": True,
+                "proactivelyReported": True
+            }
+        ]
+    elif model_name == "Smart Camera":
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.CameraStreamController",
+                "version": "3",
+                "cameraStreamConfigurations": [{
+                    "protocols": ["RTSP"],
+                    "resolutions": [{"width": 1280, "height": 720}],
+                    "authorizationTypes": ["NONE"],
+                    "videoCodecs": ["H264"],
+                    "audioCodecs": ["AAC"]
+                }]
+            }
+        ]
+    else:
+        # in this example, just return simple on/off capability
+        capabilities = [
+            {
+                "type": "AlexaInterface",
+                "interface": "Alexa.PowerController",
+                "version": "3",
+                "properties": {
+                    "supported": [
+                        {"name": "powerState"}
+                    ],
+                    "proactivelyReported": True,
+                    "retrievable": True
+                }
+            }
+        ]
+
+    # additional capabilities that are required for each endpoint
+    endpoint_health_capability = {
+        "type": "AlexaInterface",
+        "interface": "Alexa.EndpointHealth",
+        "version": "3",
+        "properties": {
+            "supported": [
+                {"name": "connectivity"}
+            ],
+            "proactivelyReported": True,
+            "retrievable": True
+        }
+    }
+    alexa_interface_capability = {
+        "type": "AlexaInterface",
+        "interface": "Alexa",
+        "version": "3"
+    }
+    capabilities.append(endpoint_health_capability)
+    capabilities.append(alexa_interface_capability)
+    return capabilities
+
+
+def get_directive_version(request):
+    try:
+        return request["directive"]["header"]["payloadVersion"]
+    except Exception:
+        try:
+            return request["header"]["payloadVersion"]
+        except Exception:
+            return "-1"
+
+
 # Lambda entry point
 def event_handler(event, context):
     config = Configuration('config.json')
@@ -798,17 +1146,21 @@ def event_handler(event, context):
         logger.setLevel(logging.DEBUG)
     ha = HomeAssistant(config)
     version = get_directive_version(event)
-    
+
     if version == "3":
+        logger.setLevel(logging.DEBUG)
         directive = event['directive']
         namespace = directive['header']['namespace']
         name = directive['header']['name']
-        payload = directive.get('payload')
 
-        logger.debug('calling v3 event handler for %s, payload: %s', name, str({k: v for k, v in payload.items()
-                         if k != u'accessToken'}))
-        
-        return invoke(namespace, name, ha, payload)
+        payload = directive.get('payload')
+        endpoint = directive.get('endpoint')
+
+        logger.debug('calling v3 event handler for %s, payload: %s', name, str(
+                     {k: v for k, v in payload.items()
+                      if k != u'accessToken'}))
+
+        return invoke(namespace, name, ha, payload, endpoint)
     else:
         logger.debug('calling v2 event handler')
-        return null
+        return ''
