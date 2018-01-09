@@ -163,6 +163,21 @@ class Alexa(object):
             })
             pass
 
+    class PercentageController(ConnectedHomeCall):
+        def SetPercentage(self):
+            percentage = self.payload['percentage']
+            self.entity.set_percentage(percentage)
+
+        def AdjustPercentage(self):
+            delta = self.payload['percentageDelta']
+            val = self.entity.get_percentage()
+            val += delta
+            if val < 0.0:
+                val = 0
+            elif val >= 100.0:
+                val = 100.0
+            self.entity.set_percentage(val)
+
     class ConnectedHome(object):
         class System(ConnectedHomeCall):
             def HealthCheckRequest(self):
