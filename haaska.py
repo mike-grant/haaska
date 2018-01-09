@@ -150,7 +150,6 @@ class Alexa(object):
                 "timeOfSample": datetime.datetime.utcnow().isoformat(),
                 "uncertaintyInMilliseconds": 200
             })
-            pass
 
         def TurnOff(self):
             self.entity.turn_off()
@@ -161,7 +160,6 @@ class Alexa(object):
                 "timeOfSample": datetime.datetime.utcnow().isoformat(),
                 "uncertaintyInMilliseconds": 200
             })
-            pass
 
     class PercentageController(ConnectedHomeCall):
         def SetPercentage(self):
@@ -470,7 +468,8 @@ class Entity(object):
                     }
                 })
 
-        if hasattr(self, 'get_current_temperature') or hasattr(self, 'get_temperature'):
+        if hasattr(self, 'get_current_temperature') or hasattr(
+                                           self, 'get_temperature'):
             capabilities.append(
                 {
                     "type": "AlexaInterface",
