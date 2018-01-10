@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.6
 # coding: utf-8
 
 # Copyright (c) 2015 Michael Auchter <a@phire.org>
@@ -160,6 +160,21 @@ class Alexa(object):
                 "timeOfSample": datetime.datetime.utcnow().isoformat(),
                 "uncertaintyInMilliseconds": 200
             })
+
+    class BrightnessController(ConnectedHomeCall):
+        def AdjustBrightness(self):
+            percentage = self.payload['brightness']
+            self.entity.set_percentage(percentage)
+
+        def SetBrightness(self):
+            delta = self.payload['brightnessDelta']
+            val = self.entity.get_percentage()
+            val += delta
+            if val < 0.0:
+                val = 0
+            elif val >= 100.0:
+                val = 100.0
+            self.entity.set_percentage(val)
 
     class PercentageController(ConnectedHomeCall):
         def SetPercentage(self):
