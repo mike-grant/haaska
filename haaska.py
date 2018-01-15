@@ -165,6 +165,13 @@ class Alexa(object):
         def AdjustBrightness(self):
             percentage = self.payload['brightness']
             self.entity.set_percentage(percentage)
+            self.context_properties.append({
+                "namespace": "Alexa.BrightnessController",
+                "name": "brightness",
+                "value": percentage,
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
 
         def SetBrightness(self):
             delta = self.payload['brightnessDelta']
@@ -175,11 +182,25 @@ class Alexa(object):
             elif val >= 100.0:
                 val = 100.0
             self.entity.set_percentage(val)
+            self.context_properties.append({
+                "namespace": "Alexa.BrightnessController",
+                "name": "brightness",
+                "value": val,
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
 
     class PercentageController(ConnectedHomeCall):
         def SetPercentage(self):
             percentage = self.payload['percentage']
             self.entity.set_percentage(percentage)
+            self.context_properties.append({
+                "namespace": "Alexa.PercentageController",
+                "name": "percentage",
+                "value": percentage,
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
 
         def AdjustPercentage(self):
             delta = self.payload['percentageDelta']
@@ -190,7 +211,50 @@ class Alexa(object):
             elif val >= 100.0:
                 val = 100.0
             self.entity.set_percentage(val)
+            self.context_properties.append({
+                "namespace": "Alexa.PercentageController",
+                "name": "percentage",
+                "value": val,
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
 
+    class ColorTemperatureController(ConnectedHomeCall):
+        def DecreaseColorTemperature(self):
+            current = self.entity.get_color_temperature()
+            new = current - 500
+            self.entity.set_color_temperature(new)
+            self.context_properties.append({
+                "namespace": "Alexa.ColorTemperatureController",
+                "name": "colorTemperatureInKelvin",
+                "value": new,
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
+
+        def IncreaseColorTemperature(self):
+            current = self.entity.get_color_temperature()
+            new = current + 500
+            self.entity.set_color_temperature(new)
+            self.context_properties.append({
+                "namespace": "Alexa.ColorTemperatureController",
+                "name": "colorTemperatureInKelvin",
+                "value": new,
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
+
+        def SetColorTemperature(self):
+            temp = self.payload['colorTemperatureInKelvin']
+            self.entity.set_color_temperature(temp)
+            self.context_properties.append({
+                "namespace": "Alexa.ColorTemperatureController",
+                "name": "colorTemperatureInKelvin",
+                "value": temp,
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
+            
     class ConnectedHome(object):
         class System(ConnectedHomeCall):
             def HealthCheckRequest(self):
@@ -854,308 +918,6 @@ class Configuration(object):
 
     def dump(self):
         return json.dumps(self.opts, indent=2, separators=(',', ': '))
-
-
-def get_capabilities_from_v2_appliance(appliance):
-    model_name = appliance["modelName"]
-    if model_name == 'Smart Switch':
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.PowerController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "powerState"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            }
-        ]
-    elif model_name == "Smart Light":
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.PowerController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "powerState"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.ColorController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "color"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.ColorTemperatureController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "colorTemperatureInKelvin"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.BrightnessController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "brightness"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.PowerLevelController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "powerLevel"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.PercentageController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "percentage"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            }
-        ]
-    elif model_name == "Smart White Light":
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.PowerController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "powerState"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.ColorTemperatureController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "colorTemperatureInKelvin"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.BrightnessController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "brightness"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.PowerLevelController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "powerLevel"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.PercentageController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "percentage"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            }
-        ]
-    elif model_name == "Smart Thermostat":
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.ThermostatController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "targetSetpoint"},
-                        {"name": "thermostatMode"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.TemperatureSensor",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "temperature"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            }
-        ]
-    elif model_name == "Smart Thermostat Dual":
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.ThermostatController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "upperSetpoint"},
-                        {"name": "lowerSetpoint"},
-                        {"name": "thermostatMode"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            },
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.TemperatureSensor",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "temperature"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            }
-        ]
-    elif model_name == "Smart Lock":
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.LockController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "lockState"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            }
-        ]
-    elif model_name == "Smart Scene":
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.SceneController",
-                "version": "3",
-                "supportsDeactivation": False,
-                "proactivelyReported": True
-            }
-        ]
-    elif model_name == "Smart Activity":
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.SceneController",
-                "version": "3",
-                "supportsDeactivation": True,
-                "proactivelyReported": True
-            }
-        ]
-    elif model_name == "Smart Camera":
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.CameraStreamController",
-                "version": "3",
-                "cameraStreamConfigurations": [{
-                    "protocols": ["RTSP"],
-                    "resolutions": [{"width": 1280, "height": 720}],
-                    "authorizationTypes": ["NONE"],
-                    "videoCodecs": ["H264"],
-                    "audioCodecs": ["AAC"]
-                }]
-            }
-        ]
-    else:
-        # in this example, just return simple on/off capability
-        capabilities = [
-            {
-                "type": "AlexaInterface",
-                "interface": "Alexa.PowerController",
-                "version": "3",
-                "properties": {
-                    "supported": [
-                        {"name": "powerState"}
-                    ],
-                    "proactivelyReported": True,
-                    "retrievable": True
-                }
-            }
-        ]
-
-    # additional capabilities that are required for each endpoint
-    endpoint_health_capability = {
-        "type": "AlexaInterface",
-        "interface": "Alexa.EndpointHealth",
-        "version": "3",
-        "properties": {
-            "supported": [
-                {"name": "connectivity"}
-            ],
-            "proactivelyReported": True,
-            "retrievable": True
-        }
-    }
-    alexa_interface_capability = {
-        "type": "AlexaInterface",
-        "interface": "Alexa",
-        "version": "3"
-    }
-    capabilities.append(endpoint_health_capability)
-    capabilities.append(alexa_interface_capability)
-    return capabilities
 
 
 def get_directive_version(request):
