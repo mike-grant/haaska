@@ -216,7 +216,7 @@ class Alexa(object):
         class Control(ConnectedHomeCall):
             def __init__(self, namespace, name, ha, payload):
                 super(Alexa.ConnectedHome.Control, self).__init__(
-                        namespace, name, ha, payload)
+                    namespace, name, ha, payload)
                 self.response_name = name.replace('Request', 'Confirmation')
 
             def TurnOnRequest(self):
@@ -1186,8 +1186,8 @@ def event_handler(event, context):
         endpoint = directive.get('endpoint')
 
         logger.debug('calling v3 event handler for %s, payload: %s', name, str(
-                     {k: v for k, v in payload.items()
-                      if k != u'accessToken'}))
+            {k: v for k, v in payload.items()
+                if k != u'accessToken'}))
 
         return invoke(namespace, name, ha, payload, endpoint)
     else:
