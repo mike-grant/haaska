@@ -254,7 +254,7 @@ class Alexa(object):
                 "timeOfSample": datetime.datetime.utcnow().isoformat(),
                 "uncertaintyInMilliseconds": 200
             })
-            
+
     class ConnectedHome(object):
         class System(ConnectedHomeCall):
             def HealthCheckRequest(self):
