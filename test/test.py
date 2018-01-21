@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.6
 # coding: utf-8
 
 # Basic tests meant to be run against a demo instance of Home-Assistant
