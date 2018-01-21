@@ -6,7 +6,6 @@
 
 import sys
 import unittest
-from nose.tools import assert_raises
 sys.path.insert(0, '..')
 import haaska  # noqa: E402
 
