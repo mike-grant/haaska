@@ -76,17 +76,23 @@ class HomeAssistant(object):
 
 
 class ConnectedHomeCall(object):
-    def __init__(self, namespace, name, ha, payload, endpoint):
+    def __init__(self, namespace, name, ha, payload, endpoint,
+                 correlation_token):
         logger.debug('Building connected home call %s, %s, %s', namespace,
                      name, payload)
         self.namespace = namespace
         self.name = name
-        self.response_name = self.name + '.Response'
+        if self.name == 'ReportState':
+            self.response_name = 'StateReport'
+            self.namespace = 'Alexa'
+        else:
+            self.response_name = self.name + '.Response'
         self.ha = ha
         self.payload = payload
         self.endpoint = endpoint
         self.entity = None
         self.context_properties = []
+        self.correlationToken = correlation_token
         # if 'appliance' in self.payload:
         #    details = payload['appliance']['additionalApplianceDetails']
         #    self.entity = mk_entity(ha, details['entity_id'])
@@ -127,7 +133,7 @@ class ConnectedHomeCall(object):
                                 'messageId': str(uuid4()),
                                 'name': self.response_name,
                                 'payloadVersion': '3',
-                                'correlationToken': '123456'
+                                'correlationToken': self.correlationToken
                                 }
         return r
 
@@ -139,6 +145,31 @@ class Alexa(object):
                 return {'endpoints': discover_appliances(self.ha)}
             except Exception:
                 logger.exception('v3 DiscoverAppliancesRequest failed')
+
+    class ReportState(ConnectedHomeCall):
+        def ReportState(self):
+            # Simple reporting for endpoint health,
+            self.context_properties.append({
+                "namespace": "Alexa.EndpointHealth",
+                "name": "connectivity",
+                "value": [
+                    "OK"
+                ],
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
+
+            if hasattr(self.entity, 'turn_on') or hasattr(self.entity, 
+                                                          'turn_off'):
+                state = self.ha.get('states/' + self.entity.entity_id)
+                device_state = state.get('state')
+                self.context_properties.append({
+                    "namespace": "Alexa.PowerController",
+                    "name": "powerState",
+                    "value": device_state.upper(),
+                    "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                    "uncertaintyInMilliseconds": 200
+                })
 
     class PowerController(ConnectedHomeCall):
         def TurnOn(self):
@@ -251,6 +282,22 @@ class Alexa(object):
                 "namespace": "Alexa.ColorTemperatureController",
                 "name": "colorTemperatureInKelvin",
                 "value": temp,
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
+
+    class TemperatureSensor(ConnectedHomeCall):
+        def ReportState(self):
+            state = self.ha.get('states/' + self.entity.entity_id)
+            unit = state['attributes']['unit_of_measurement']
+            temperature = self.entity.get_current_temperature(state)
+            self.context_properties.append({
+                "namespace": "Alexa.TemperatureSensor",
+                "name": "temperature",
+                "value": {
+                    "value": temperature,
+                    "scale": scale
+                },
                 "timeOfSample": datetime.datetime.utcnow().isoformat(),
                 "uncertaintyInMilliseconds": 200
             })
@@ -418,13 +465,13 @@ class Alexa(object):
                 return {'lockState': lock_state}
 
 
-def invoke(namespace, name, ha, payload, endpoint):
+def invoke(namespace, name, ha, payload, endpoint, correlation_token):
     class allowed(object):
         Alexa = Alexa
     make_class = operator.attrgetter(namespace)
     logger.debug('Calling invoke %s, %s, %s, %s, %s', namespace, name, ha,
                  payload, endpoint)
-    obj = make_class(allowed)(namespace, name, ha, payload, endpoint)
+    obj = make_class(allowed)(namespace, name, ha, payload, endpoint, correlation_token)
     return obj.invoke(name)
 
 
@@ -454,7 +501,7 @@ def discover_appliances(ha):
         o['endpointId'] = x['entity_id'].replace('.', ':')
         o['manufacturerName'] = 'Unknown'
         o['modelName'] = 'Unknown'
-        o['displayCategories'] = ['SWITCH']
+        o['displayCategories'] = get_display_category(entity_domain(x))
         if 'haaska_name' in x['attributes']:
             o['friendlyName'] = x['attributes']['haaska_name']
         else:
@@ -871,11 +918,23 @@ DOMAINS = {
     'automation': ToggleEntity
 }
 
+DISPLAY_CATEGORIES = {
+    'automation': 'ACTIVITY_TRIGGER',
+    'input_boolean': 'SWITCH',
+    'input_slider': 'SWITCH',
+    'light': 'LIGHT',
+    'media_player': 'TV'
+}
+
 
 def mk_entity(ha, entity_id, supported_features=0):
     entity_domain = entity_id.split('.', 1)[0]
     logger.debug('Making entity w/ domain: %s', entity_domain)
     return DOMAINS[entity_domain](ha, entity_id, supported_features)
+
+
+def get_display_category(entity_domain):
+    return [DISPLAY_CATEGORIES[entity_domain]]
 
 
 class Configuration(object):
@@ -941,8 +1000,11 @@ def event_handler(event, context):
     if version == "3":
         logger.setLevel(logging.DEBUG)
         directive = event['directive']
-        namespace = directive['header']['namespace']
-        name = directive['header']['name']
+        header = directive['header']
+
+        namespace = header.get('namespace')
+        name = header.get('name')
+        correlation_token = header.get('correlationToken')
 
         payload = directive.get('payload')
         endpoint = directive.get('endpoint')
@@ -951,7 +1013,8 @@ def event_handler(event, context):
             {k: v for k, v in payload.items()
                 if k != u'accessToken'}))
 
-        return invoke(namespace, name, ha, payload, endpoint)
+        return invoke(namespace, name, ha, payload, endpoint,
+                      correlation_token)
     else:
         logger.debug('calling v2 event handler')
         return ''
