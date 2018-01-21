@@ -4,10 +4,10 @@
 # Basic tests meant to be run against a demo instance of Home-Assistant
 # $ hass --demo
 
-import haaska  # noqa: E402
 import sys
 import unittest
 sys.path.insert(0, '..')
+import haaska  # noqa: E402
 
 
 def discover_appliance_request():
