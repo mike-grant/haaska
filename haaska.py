@@ -159,7 +159,7 @@ class Alexa(object):
                 "uncertaintyInMilliseconds": 200
             })
 
-            if hasattr(self.entity, 'turn_on') or hasattr(self.entity, 
+            if hasattr(self.entity, 'turn_on') or hasattr(self.entity,
                                                           'turn_off'):
                 state = self.ha.get('states/' + self.entity.entity_id)
                 device_state = state.get('state')
@@ -286,7 +286,7 @@ class Alexa(object):
                 "uncertaintyInMilliseconds": 200
             })
 
-    class TemperatureSensor(ConnectedHomeCall):
+    ''' class TemperatureSensor(ConnectedHomeCall):
         def ReportState(self):
             state = self.ha.get('states/' + self.entity.entity_id)
             unit = state['attributes']['unit_of_measurement']
@@ -300,7 +300,7 @@ class Alexa(object):
                 },
                 "timeOfSample": datetime.datetime.utcnow().isoformat(),
                 "uncertaintyInMilliseconds": 200
-            })
+            }) '''
 
     class ConnectedHome(object):
         class System(ConnectedHomeCall):
@@ -471,7 +471,8 @@ def invoke(namespace, name, ha, payload, endpoint, correlation_token):
     make_class = operator.attrgetter(namespace)
     logger.debug('Calling invoke %s, %s, %s, %s, %s', namespace, name, ha,
                  payload, endpoint)
-    obj = make_class(allowed)(namespace, name, ha, payload, endpoint, correlation_token)
+    obj = make_class(allowed)(namespace, name, ha, payload, endpoint,
+                              correlation_token)
     return obj.invoke(name)
 
 
