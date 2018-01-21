@@ -736,7 +736,7 @@ class ToggleEntity(Entity):
         self._call_service('homeassistant/turn_off')
 
 
-class InputSliderEntity(Entity):
+class InputNumberEntity(Entity):
     def get_percentage(self):
         state = self.ha.get('states/' + self.entity_id)
         value = float(state['state'])
@@ -755,7 +755,7 @@ class InputSliderEntity(Entity):
         rounded = step * round(scaled / step)
         adjusted = rounded + minimum
 
-        self._call_service('input_slider/select_value', {'value': adjusted})
+        self._call_service('input_number/set_value', {'value': adjusted})
 
 
 class GarageDoorEntity(ToggleEntity):
@@ -905,7 +905,7 @@ DOMAINS = {
     'garage_door': GarageDoorEntity,
     'group': ToggleEntity,
     'input_boolean': ToggleEntity,
-    'input_slider': InputSliderEntity,
+    'input_number': InputNumberEntity,
     'switch': ToggleEntity,
     'fan': FanEntity,
     'cover': CoverEntity,

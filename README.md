@@ -14,7 +14,7 @@ haaska implements a bridge between a [Home Assistant](https://home-assistant.io)
 | Fans           | Yes               | Yes (speed)    |
 | Groups         | Yes               | No             |
 | Input Booleans | Yes               | No             |
-| Input Sliders  | No                | Yes (value)    |
+| Input Numbers  | No                | Yes (value)    |
 | Lights         | Yes               | Yes            |
 | Locks          | Lock/Unlock       | No             |
 | Media Players  | Yes               | Yes (volume)   |
@@ -67,7 +67,7 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
 | `password `           | `securepassword`                                                                                                                                                            | **Yes**   | The API password of your Home Assistant instance.                                                                                                                       |
 | `ssl_verify`          | `mycert.crt`                                                                                                                                                                | No        | This will be passed as the `verify` parameter for all requests; see [here](http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification) for options. |
 | `expose_by_default`   | `true`                                                                                                                                                                      | No        | Whether or not entities should be exposed to Alexa by default. If not specified, this defaults to true.                                                                 |
-| `exposed_domains`     | `["alert", "automation", "climate", "cover", "fan", "garage_door", "group", "input_boolean", "input_slider", "light", "lock", "media_player", "scene", "script", "switch"]` | No        | A JSON array of entity types to expose to Alexa. If not provided, the example value is used.                                                                            |
+| `exposed_domains`     | `["alert", "automation", "climate", "cover", "fan", "garage_door", "group", "input_boolean", "input_number", "light", "lock", "media_player", "scene", "script", "switch"]` | No        | A JSON array of entity types to expose to Alexa. If not provided, the example value is used.                                                                            |
 | `entity_suffixes`     | `{"group": "Group", "scene": "Scene"}`                                                                                                                                      | No        | A JSON object of entity suffixes to expose to Alexa. If not provided, the example value is used.                                                                        |
 | `debug`               | `false`                                                                                                                                                                     | No        | When enabled, the haaska log level will be set to debug. If not provided, this defaults to false.                                                                       |
 
