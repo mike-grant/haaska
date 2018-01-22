@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.6
 # coding: utf-8
 
 # Copyright (c) 2015 Michael Auchter <a@phire.org>
@@ -41,6 +41,7 @@ class HomeAssistant(object):
                                 'content-type': 'application/json',
                                 'User-Agent': agent_fmt}
         self.session.verify = config.ssl_verify
+        self.session.cert = config.ssl_client
 
     def build_url(self, relurl):
         return '%s/%s' % (self.config.url, relurl)
@@ -81,7 +82,7 @@ class Configuration(object):
                                default='http://localhost:8123/api')
         opts['ssl_verify'] = self.get(['ssl_verify', 'ha_cert'], default=True)
         opts['password'] = self.get(['password', 'ha_passwd'], default='')
-
+        opts['ssl_client'] = self.get(['ssl_client'], default='')
         opts['debug'] = self.get(['debug'], default=False)
         self.opts = opts
 
