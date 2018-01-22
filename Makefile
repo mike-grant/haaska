@@ -22,15 +22,21 @@ deploy: haaska.zip
 		--zip-file fileb://$<
 
 TEST_PAYLOAD:='                                \
-{                                              \
-  "header": {                                  \
-    "payloadVersion": "2",                     \
-    "namespace": "Alexa.ConnectedHome.System", \
-    "name": "HealthCheckRequest"               \
-  },                                           \
-  "payload": {                                 \
-    "accessToken": "..."                       \
-  }                                            \
+{                                                         \
+  "directive": {                                          \
+    "header": {                                           \
+      "namespace": "Alexa.Discovery",                     \
+      "name": "Discover",                                 \
+      "payloadVersion": "3",                              \
+      "messageId": "1bd5d003-31b9-476f-ad03-71d471922820" \
+    },                                                    \
+    "payload": {                                          \
+      "scope": {                                          \
+        "type": "BearerToken",                            \
+        "token": "access-token-from-skill"                \
+      }                                                   \
+    }                                                     \
+  }                                                       \
 }'
 
 .PHONY: test
@@ -38,7 +44,7 @@ test:
 	@aws lambda invoke \
 		--function-name $(FUNCTION_NAME) \
 		--payload ${TEST_PAYLOAD} \
-		/dev/fd/3 3>&1 >/dev/null | jq -e '., .payload.isHealthy'
+		/dev/fd/3 3>&1 >/dev/null
 
 DISCOVERY_PAYLOAD:='                              \
 {                                                 \
