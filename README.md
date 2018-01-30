@@ -6,7 +6,7 @@
 
 haaska implements a bridge between a [Home Assistant](https://home-assistant.io) instance and the [Smart Home Skill API](https://developer.amazon.com/alexa/smart-home) for Amazon's Alexa. It provides voice control for a connected home managed by Home Assistant, through any Alexa-enabled device. Currently, haaska supports the following entity types:
 
-For a list of available components that can be controller [Home Assistant Docs](https://home-assistant.io/components/cloud.alexa/#available-domains)
+For a list of available components that can be controlled [Home Assistant Docs](https://home-assistant.io/components/cloud.alexa/#available-domains)
 
 ## Setup
 
