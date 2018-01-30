@@ -1,13 +1,13 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.6
 # coding: utf-8
 
 # Basic tests meant to be run against a demo instance of Home-Assistant
 # $ hass --demo
 
-import haaska  # noqa: E402
 import sys
 import unittest
 sys.path.insert(0, '..')
+import haaska  # noqa: E402
 
 
 def discover_appliance_request():
