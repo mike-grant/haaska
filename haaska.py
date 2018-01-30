@@ -250,6 +250,18 @@ class Alexa(object):
                 "uncertaintyInMilliseconds": 200
             })
 
+    class Speaker(ConnectedHomeCall):
+        def SetVolume(self):
+            volume = self.payload['volume']
+            self.entity.set_volume(volume)
+            self.context_properties.append({
+                "namespace": "Alexa.Speaker",
+                "name": "SetVolume",
+                "value": volume,
+                "timeOfSample": datetime.datetime.utcnow().isoformat(),
+                "uncertaintyInMilliseconds": 200
+            })
+
     class ColorTemperatureController(ConnectedHomeCall):
         def DecreaseColorTemperature(self):
             current = self.entity.get_color_temperature()
@@ -594,6 +606,22 @@ class Entity(object):
                         "retrievable": True
                     }
                 })
+        if hasattr(self, 'set_volume') or hasattr(self, 'get_volume'):
+            capabilities.append(
+                {
+                    "type": "AlexaInterface",
+                    "interface": "Alexa.Speaker",
+                    "version": "3",
+                    "properties": {
+                        "supported": [
+                            {
+                                "name": "SetVolume"
+                            }
+                        ],
+                        "proactivelyReported": True,
+                        "retrievable": True
+                    }
+                })
 
         if hasattr(self, 'get_current_temperature') or hasattr(
                                            self, 'get_temperature'):
@@ -736,7 +764,7 @@ class ToggleEntity(Entity):
         self._call_service('homeassistant/turn_off')
 
 
-class InputSliderEntity(Entity):
+class InputNumberEntity(Entity):
     def get_percentage(self):
         state = self.ha.get('states/' + self.entity_id)
         value = float(state['state'])
@@ -755,7 +783,7 @@ class InputSliderEntity(Entity):
         rounded = step * round(scaled / step)
         adjusted = rounded + minimum
 
-        self._call_service('input_slider/select_value', {'value': adjusted})
+        self._call_service('input_number/set_value', {'value': adjusted})
 
 
 class GarageDoorEntity(ToggleEntity):
@@ -829,6 +857,15 @@ class MediaPlayerEntity(ToggleEntity):
         return vol * 100.0
 
     def set_percentage(self, val):
+        vol = val / 100.0
+        self._call_service('media_player/volume_set', {'volume_level': vol})
+    
+    def get_volume(self):
+        state = self.ha.get('states/' + self.entity_id)
+        vol = state['attributes']['volume_level']
+        return vol * 100.0
+
+    def set_volume(self, val):
         vol = val / 100.0
         self._call_service('media_player/volume_set', {'volume_level': vol})
 
@@ -905,7 +942,7 @@ DOMAINS = {
     'garage_door': GarageDoorEntity,
     'group': ToggleEntity,
     'input_boolean': ToggleEntity,
-    'input_slider': InputSliderEntity,
+    'input_number': InputNumberEntity,
     'switch': ToggleEntity,
     'fan': FanEntity,
     'cover': CoverEntity,
