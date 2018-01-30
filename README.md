@@ -1,32 +1,16 @@
 # haaska: Home Assistant Alexa Skill Adapter
 
-[![Join the chat at https://gitter.im/auchter/haaska](https://badges.gitter.im/auchter/haaska.svg)](https://gitter.im/auchter/haaska?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/auchter/haaska.svg?branch=master)](https://travis-ci.org/auchter/haaska)
+[![Build Status](https://travis-ci.org/mike-grant/haaska.svg?branch=master)](https://travis-ci.org/mike-grant/haaska)
+
+(Thanks to [@bitglue](https://github.com/bitglue) for his work getting the smart home exposed via HTTP making this slimmed down version possible.)	
 
 haaska implements a bridge between a [Home Assistant](https://home-assistant.io) instance and the [Smart Home Skill API](https://developer.amazon.com/alexa/smart-home) for Amazon's Alexa. It provides voice control for a connected home managed by Home Assistant, through any Alexa-enabled device. Currently, haaska supports the following entity types:
 
-| Type           | On/Off Supported? | Dim Supported? |
-|----------------|-------------------|----------------|
-| Alerts         | Yes               | No             |
-| Automations    | Yes               | No             |
-| Climate        | Yes               | Temperature    |
-| Cover          | Yes               | No             |
-| Fans           | Yes               | Yes (speed)    |
-| Groups         | Yes               | No             |
-| Input Booleans | Yes               | No             |
-| Input Sliders  | No                | Yes (value)    |
-| Lights         | Yes               | Yes            |
-| Locks          | Lock/Unlock       | No             |
-| Media Players  | Yes               | Yes (volume)   |
-| Scenes         | Yes               | No             |
-| Scripts        | Yes               | No             |
-| Switches       | Yes               | No             |
-
-[@brusc](https://github.com/brusc) put together a good [video](https://www.youtube.com/watch?v=zZuwQ9spPkQ) which demonstrates haaska in action, and provides a walkthrough of the setup process.
-
-Note that Home Assistant includes a component (`emulated_hue`) to communicate with Amazon Echo and Google Home devices. `emulated_hue` exposes the entities in Home Assistant as Philips Hue lights. This allows basic voice control without the effort of setting up haaska, but its capabilities are limited compared to an Alexa skill and it does not work with every Alexa-enabled device.
+For a list of available components that can be controller [Home Assistant Docs](https://home-assistant.io/components/cloud.alexa/#available-domains)
 
 ## Setup
+
+1. Enable the [Alexa](https://home-assistant.io/components/alexa/#smart-home) component in Home Assistant
 
 1. In the `config/` directory, copy `config.json.sample` to `config.json` and update it. [Below](#config-values) is a listing of properties that `config.json` will accept.
 
@@ -66,9 +50,6 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
 | `url`                 | `https://home-assistant.io/demo/`                                                                                                                                           | **Yes**   | The API endpoint of your Home Assistant instance.                                                                                                                       |
 | `password `           | `securepassword`                                                                                                                                                            | **Yes**   | The API password of your Home Assistant instance.                                                                                                                       |
 | `ssl_verify`          | `mycert.crt`                                                                                                                                                                | No        | This will be passed as the `verify` parameter for all requests; see [here](http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification) for options. |
-| `expose_by_default`   | `true`                                                                                                                                                                      | No        | Whether or not entities should be exposed to Alexa by default. If not specified, this defaults to true.                                                                 |
-| `exposed_domains`     | `["alert", "automation", "climate", "cover", "fan", "garage_door", "group", "input_boolean", "input_slider", "light", "lock", "media_player", "scene", "script", "switch"]` | No        | A JSON array of entity types to expose to Alexa. If not provided, the example value is used.                                                                            |
-| `entity_suffixes`     | `{"group": "Group", "scene": "Scene"}`                                                                                                                                      | No        | A JSON object of entity suffixes to expose to Alexa. If not provided, the example value is used.                                                                        |
 | `debug`               | `false`                                                                                                                                                                     | No        | When enabled, the haaska log level will be set to debug. If not provided, this defaults to false.                                                                       |
 
 ## Usage
@@ -118,17 +99,23 @@ To upgrade to a new version, run `make deploy`
 
 ## Customization
 
-Sometimes the "friendly name" of an entity in Home Assistant differs from what you'd actually like to call that entity when talking to Alexa. haaska provides a mechanism to define a custom name for an entity that will be used via Alexa. This is achieved by adding your entity to a [customize](https://home-assistant.io/getting-started/devices/) block in your `configuration.yaml`, and setting the `haaska_name` key to the desired name.
+Sometimes the "friendly name" or "display category" of an entity in Home Assistant differs from what you'd actually like to call that entity when talking to Alexa. Home Assistant provides a mechanism to define a custom name for an entity that will be used via Alexa. This is achieved by adding an entity_config to the [alexa component](https://home-assistant.io/components/alexa/#smart-home) configuration entity in your configuration file.
 
 ```yaml
-customize:
-  light.some_long_light_name:
-    haaska_name: Overhead
+alexa:
+  smart_home:
+    entity_config:
+      light.kitchen:
+        name: Custom name for Alexa
+        display_categories: LIGHT
+        
 ```
-If there's an entity you'd like to hide from haaska, you can do that by adding a `haaska_hidden` tag and setting it to `true`; e.g.:
+If there's an entity you'd like to hide from haaska, you can do that by adding the entity to the `exclude_entities` section of the [alexa component](https://home-assistant.io/components/alexa/#smart-home) configuration e.g.:
 
 ```yaml
-customize:
-  switch.a_switch:
-    haaska_hidden: true
+alexa:
+  smart_home:
+    filter:
+      exclude_entities:
+        - light.kitchen
 ```
