@@ -21,7 +21,7 @@ deploy: haaska.zip
 		--function-name $(FUNCTION_NAME) \
 		--zip-file fileb://$<
 
-TEST_PAYLOAD:='                                \
+DISCOVERY_PAYLOAD:='                                \
 {                                                         \
   "directive": {                                          \
     "header": {                                           \
@@ -37,25 +37,6 @@ TEST_PAYLOAD:='                                \
       }                                                   \
     }                                                     \
   }                                                       \
-}'
-
-.PHONY: test
-test:
-	@aws lambda invoke \
-		--function-name $(FUNCTION_NAME) \
-		--payload ${TEST_PAYLOAD} \
-		/dev/fd/3 3>&1 >/dev/null
-
-DISCOVERY_PAYLOAD:='                              \
-{                                                 \
-  "header": {                                     \
-    "payloadVersion": "2",                        \
-    "namespace": "Alexa.ConnectedHome.Discovery", \
-    "name": "DiscoverAppliancesRequest"           \
-  },                                              \
-  "payload": {                                    \
-    "accessToken": "..."                          \
-  }                                               \
 }'
 
 .PHONY: discover
