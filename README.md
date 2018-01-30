@@ -10,6 +10,8 @@ For a list of available components that can be controlled [Home Assistant Docs](
 
 ## Setup
 
+1. Ensure that you're currently running [Home Assistant](https://home-assistant.io) version 0.62 or greater.
+
 1. Enable the [Alexa](https://home-assistant.io/components/alexa/#smart-home) component in Home Assistant
 
 1. In the `config/` directory, copy `config.json.sample` to `config.json` and update it. [Below](#config-values) is a listing of properties that `config.json` will accept.
