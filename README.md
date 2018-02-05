@@ -1,7 +1,7 @@
 # haaska: Home Assistant Alexa Skill Adapter
-[![Build Status](https://travis-ci.org/mike-grant/haaska.svg?branch=master)](https://travis-ci.org/mike-grant/haaska)
 
-Please note, this is an in-progress fork of HAASKA to update it to support the Amazon Smart Home V3 API
+[![Join the chat at https://gitter.im/mike-grant/haaska](https://badges.gitter.im/mike-grant/haaska.svg)](https://gitter.im/mike-grant/haaska?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/mike-grant/haaska.svg?branch=master)](https://travis-ci.org/mike-grant/haaska)
 
 haaska implements a bridge between a [Home Assistant](https://home-assistant.io) instance and the [Smart Home Skill API](https://developer.amazon.com/alexa/smart-home) for Amazon's Alexa. It provides voice control for a connected home managed by Home Assistant, through any Alexa-enabled device. Currently, haaska supports the following entity types:
 
@@ -28,16 +28,16 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
 
 ## Setup
 
-1. In the `config/` directory, copy `config.json.sample` to `config.json` and update it. [Below](#config-values) is a listing of properties that `config.json` will accept.
+1.  In the `config/` directory, copy `config.json.sample` to `config.json` and update it. [Below](#config-values) is a listing of properties that `config.json` will accept.
 
-1. Run `make` to build a deployable package of haaska. This will generate a `haaska.zip` file that you'll upload to AWS Lambda (if you're used to docker you can try running make with `docker build -t haaska . && docker run -v "$PWD":/usr/src/app haaska`
-1. Register with an OAuth provider, such as Login with Amazon.
+2. Run `make` to build a deployable package of haaska. This will generate a `haaska.zip` file that you'll upload to AWS Lambda (if you're used to docker you can try running make with `docker build -t haaska . && docker run -v "$PWD":/usr/src/app haaska`
+3. Register with an OAuth provider, such as Login with Amazon.
     * To use the current version of Login with Amazon, you must go to the [Developer Console](https://developer.amazon.com/)
         * Under "Apps & Services", select "Login with Amazon" (not "Security Profiles")
         * Click "Create a New Security Profile"
         * You can enter anything for the name (which is shown on the login page) and the privacy URL
     * Note the "Client ID" and "Client Secret", as you'll need those later
-1. Create an Alexa skill and Lambda Function by following [these instructions](https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/steps-to-create-a-smart-home-skill) (with the modifications noted below).
+4. Create an Alexa skill and Lambda Function by following [these instructions](https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/steps-to-create-a-smart-home-skill) (with the modifications noted below).
     * The name of the Alexa skill doesn't matter, but I'd suggest "haaska"
     * The name of the Lambda function does matter; use "haaska", otherwise you'll need to modify the `FUNCTION_NAME` variable in the `Makefile`.
     * For "Runtime", select "Python 3.6" as in the example
@@ -47,7 +47,8 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
         * Select "Choose an existing role", and underneath, select `lambda_basic_execution` if it exists
         * If `lambda_basic_execution` doesn't exist, select "Create a custom role" instead, and enter `lambda_basic_execution` as the "Role Name"
     * Leave the rest of the defaults alone, and click "Next"
-    * Check "Enable event source"
+    * Using AWS CLI run the following command: `aws lambda add-permissions --function-name [name of your function, for example haaska] --statement_id 1 --action lambda:InvokeFunction --principal alexa-appkit.amazon.com --event-source-token [your skill ID]`
+    * Add the Alexa Smart Home trigger and insert your skillID. Test your Lambda function now to make sure it works.
     * Under the "Account Linking" section:
         * Set Authorization URL to: https://www.amazon.com/ap/oa
         * Set the Client ID to the previously noted value from Login with Amazon
@@ -56,8 +57,8 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
         * Set Client Secret to the previously noted value from Login with Amazon
         * Note the one or more "Redirect URL(s)"
     * There are two properly sized Home Assistant logos in the images/ folder which you can upload to Amazon for use with your skill. Upload both on the "Publishing Information" step of the process.
-1. Go back to Login with Amazon, select "Web Settings" under "Manage" for your security profile, and add each "Redirect URL" from the Lambda function as an "Allowed Return URL".
-1. Send a test event by running `make test`, which will validate that haaska can communicate with your Home Assistant instance. Note that you must have the AWS CLI and [jq](https://stedolan.github.io/jq/) installed.
+5. Go back to Login with Amazon, select "Web Settings" under "Manage" for your security profile, and add each "Redirect URL" from the Lambda function as an "Allowed Return URL".
+6. Send a test event by running `make test`, which will validate that haaska can communicate with your Home Assistant instance. Note that you must have the AWS CLI and [jq](https://stedolan.github.io/jq/) installed. This should return a JSON listing the devices exposed through the HomeAssistant API.
 
 ### Config Values
 
@@ -66,10 +67,7 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
 | `url`                 | `https://home-assistant.io/demo/`                                                                                                                                           | **Yes**   | The API endpoint of your Home Assistant instance.                                                                                                                       |
 | `password `           | `securepassword`                                                                                                                                                            | **Yes**   | The API password of your Home Assistant instance.                                                                                                                       |
 | `ssl_verify`          | `mycert.crt`                                                                                                                                                                | No        | This will be passed as the `verify` parameter for all requests; see [here](http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification) for options. |
-| `expose_by_default`   | `true`                                                                                                                                                                      | No        | Whether or not entities should be exposed to Alexa by default. If not specified, this defaults to true.                                                                 |
-| `exposed_domains`     | `["alert", "automation", "climate", "cover", "fan", "garage_door", "group", "input_boolean", "input_slider", "light", "lock", "media_player", "scene", "script", "switch"]` | No        | A JSON array of entity types to expose to Alexa. If not provided, the example value is used.                                                                            |
-| `entity_suffixes`     | `{"group": "Group", "scene": "Scene"}`                                                                                                                                      | No        | A JSON object of entity suffixes to expose to Alexa. If not provided, the example value is used.                                                                        |
-| `debug`               | `false`                                                                                                                                                                     | No        | When enabled, the haaska log level will be set to debug. If not provided, this defaults to false.                                                                       |
+| `debug`               | `false`                                                                                                                                                                     | No        | When enabled, the haaska log level will be set to debug. If not provided, this defaults to false.                                                                   |
 
 ## Usage
 After completing setup of haaska, associate the Skill with Alexa by browsing to 'Skills' in the Alexa App (Mobile or Web) and clicking 'Your Skills".  Find your skill, click on it, and click enable.  Go though the Amazon authentication flow and when finished, click on Discover Devices or tell Alexa: *"Alexa, discover my devices."* If there is an issue you can go to `Menu / Smart Home` in the [web](http://echo.amazon.com/#smart-home) or mobile app and have Alexa forget all devices, and then do the discovery again. To prevent duplicate devices from appearing, ensure that the `emulated_hue` component of Home Assistant is not enabled.
@@ -118,17 +116,23 @@ To upgrade to a new version, run `make deploy`
 
 ## Customization
 
-Sometimes the "friendly name" of an entity in Home Assistant differs from what you'd actually like to call that entity when talking to Alexa. haaska provides a mechanism to define a custom name for an entity that will be used via Alexa. This is achieved by adding your entity to a [customize](https://home-assistant.io/getting-started/devices/) block in your `configuration.yaml`, and setting the `haaska_name` key to the desired name.
+Sometimes the "friendly name" or "display category" of an entity in Home Assistant differs from what you'd actually like to call that entity when talking to Alexa. Home Assistant provides a mechanism to define a custom name for an entity that will be used via Alexa. This is achieved by adding an entity_config to the [alexa component](https://home-assistant.io/components/alexa/#smart-home) configuration entity in your configuration file.
 
 ```yaml
-customize:
-  light.some_long_light_name:
-    haaska_name: Overhead
+alexa:
+  smart_home:
+    entity_config:
+      light.kitchen:
+        name: Custom name for Alexa
+        display_categories: LIGHT
+        
 ```
-If there's an entity you'd like to hide from haaska, you can do that by adding a `haaska_hidden` tag and setting it to `true`; e.g.:
+If there's an entity you'd like to hide from haaska, you can do that by adding the entity to the `exclude_entities` section of the [alexa component](https://home-assistant.io/components/alexa/#smart-home) configuration e.g.:
 
 ```yaml
-customize:
-  switch.a_switch:
-    haaska_hidden: true
+alexa:
+  smart_home:
+    filter:
+      exclude_entities:
+        - light.kitchen
 ```
