@@ -1,39 +1,7 @@
 {
   "url": "http://localhost:8123/api",
   "password": "",
-  "ssl_verify": false,
-  "expose_by_default": true,
-  "exposed_domains": [
-    "alert",
-    "automation",
-    "climate",
-    "cover",
-    "fan",
-    "group",
-    "input_boolean",
-    "input_slider",
-    "light",
-    "lock",
-    "media_player",
-    "scene",
-    "script",
-    "switch"
-  ],
-  "entity_suffixes": {
-    "alert": "",
-    "automation": "",
-    "climate": "",
-    "cover": "",
-    "fan": "",
-    "group": "Group",
-    "input_boolean": "",
-    "input_slider": "",
-    "light": "",
-    "lock": "",
-    "media_player": "",
-    "scene": "Scene",
-    "script": "",
-    "switch": ""
-  },
-  "debug": false
+  "debug": false,
+  "ssl_verify": true,
+  "ssl_client": []
 }

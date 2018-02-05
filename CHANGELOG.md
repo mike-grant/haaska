@@ -1,5 +1,9 @@
 # haaska Changelog
 
+## [0.4] - 2018-01-24
+###
+- Changed code to work with Hass 0.62, please note this skill will break on any version older than this.
+
 ## [0.3.1] - 2017-06-24
 ### Changed
 - Hotfix for a logic error in exposed/hidden entities.

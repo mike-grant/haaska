@@ -21,22 +21,22 @@ deploy: haaska.zip
 		--function-name $(FUNCTION_NAME) \
 		--zip-file fileb://$<
 
-DISCOVERY_PAYLOAD:='                              \
-{                                                 \
-  "directive": { \
-        "header": { \
-            "namespace": "Alexa.Discovery", \
-            "name": "Discover", \
-            "payloadVersion": "3", \
-            "messageId": "1bd5d003-31b9-476f-ad03-71d471922820" \
-        }, \
-        "payload": {\
-            "scope": { \
-                "type": "BearerToken", \
-                "token": "access-token-from-skill"\
-            } \
-        } \
-    }'                                           \
+DISCOVERY_PAYLOAD:='                                \
+{                                                         \
+  "directive": {                                          \
+    "header": {                                           \
+      "namespace": "Alexa.Discovery",                     \
+      "name": "Discover",                                 \
+      "payloadVersion": "3",                              \
+      "messageId": "1bd5d003-31b9-476f-ad03-71d471922820" \
+    },                                                    \
+    "payload": {                                          \
+      "scope": {                                          \
+        "type": "BearerToken",                            \
+        "token": "access-token-from-skill"                \
+      }                                                   \
+    }                                                     \
+  }                                                       \
 }'
 
 .PHONY: discover
