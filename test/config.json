@@ -1,9 +1,0 @@
-{
-  "url": "http://localhost:8123/api",
-  "password": "",
-  "debug": true,
-  "exposed_domains": [
-    "light",
-    "media_player"
-  ]
-}
