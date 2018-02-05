@@ -2,6 +2,6 @@
   "url": "http://localhost:8123/api",
   "password": "",
   "debug": false,
-  "ssl_verify": false,
-  "ssl_client":
+  "ssl_verify": true,
+  "ssl_client": []
 }
