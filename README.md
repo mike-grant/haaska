@@ -47,7 +47,7 @@ Note that Home Assistant includes a component (`emulated_hue`) to communicate wi
         * Select "Choose an existing role", and underneath, select `lambda_basic_execution` if it exists
         * If `lambda_basic_execution` doesn't exist, select "Create a custom role" instead, and enter `lambda_basic_execution` as the "Role Name"
     * Leave the rest of the defaults alone, and click "Next"
-    * Using AWS CLI run the following command: `aws lambda add-permissions --function-name [name of your function, for example haaska] --statement_id 1 --action lambda:InvokeFunction --principal alexa-appkit.amazon.com --event-source-token [your skill ID]`
+    * Using AWS CLI run the following command: `aws lambda add-permission --function-name [name of your function, for example haaska] --statement-id 1 --action lambda:InvokeFunction --principal alexa-appkit.amazon.com --event-source-token [your skill ID]`
     * Add the Alexa Smart Home trigger and insert your skillID. Test your Lambda function now to make sure it works.
     * Under the "Account Linking" section:
         * Set Authorization URL to: https://www.amazon.com/ap/oa
