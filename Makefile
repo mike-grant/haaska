@@ -10,6 +10,7 @@ haaska.zip: haaska.py config/*
 	mkdir -p $(BUILD_DIR)
 	cp $^ $(BUILD_DIR)
 	pip install -t $(BUILD_DIR) requests
+	chmod 755 $(BUILD_DIR)/haaska.py
 	cd $(BUILD_DIR); zip ../$@ -r *
 
 .PHONY: deploy
