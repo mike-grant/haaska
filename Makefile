@@ -6,10 +6,16 @@ FUNCTION_NAME=haaska
 
 BUILD_DIR=build
 
+ifneq (,$(wildcard /etc/debian_version))
+        PIP_EXTRA = --system
+else
+        PIP_EXTRA =
+endif
+
 haaska.zip: haaska.py config/*
 	mkdir -p $(BUILD_DIR)
 	cp $^ $(BUILD_DIR)
-	pip install -t $(BUILD_DIR) requests
+	pip install $(PIP_EXTRA) -t $(BUILD_DIR) requests
 	chmod 755 $(BUILD_DIR)/haaska.py
 	cd $(BUILD_DIR); zip ../$@ -r *
 
