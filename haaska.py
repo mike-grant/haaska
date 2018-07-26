@@ -31,6 +31,7 @@ from base64 import b64decode
 
 logger = logging.getLogger()
 
+
 class HomeAssistant(object):
     def __init__(self, config):
         self.config = config
@@ -89,12 +90,18 @@ class Configuration(object):
         opts['ssh_enabled'] = self.get(['ssh_enabled'], default=False)
         if opts['ssh_enabled']:
             opts['ssh_username'] = self.get(['ssh_username'], default='')
-            opts['ssh_remote_host_public_url'] = self.get(['ssh_remote_host_public_url'], default='')
-            opts['ssh_remote_host_public_port'] = self.get(['ssh_remote_host_public_port'], default=22)
-            opts['ssh_remote_host_private_url'] = self.get(['ssh_remote_host_private_url'], default='0.0.0.0')
-            opts['ssh_remote_host_private_port'] = self.get(['ssh_remote_host_private_port'], default=8123)
-            opts['ssh_local_host_port'] = self.get(['ssh_local_host_port'], default=8123)
-            opts['ssh_key_is_encrypted'] = self.get(['ssh_key_is_encrypted'], default=False)
+            opts['ssh_remote_host_public_url'] = self.get(
+                ['ssh_remote_host_public_url'], default='')
+            opts['ssh_remote_host_public_port'] = self.get(
+                ['ssh_remote_host_public_port'], default=22)
+            opts['ssh_remote_host_private_url'] = self.get(
+                ['ssh_remote_host_private_url'], default='0.0.0.0')
+            opts['ssh_remote_host_private_port'] = self.get(
+                ['ssh_remote_host_private_port'], default=8123)
+            opts['ssh_local_host_port'] = self.get(
+                ['ssh_local_host_port'], default=8123)
+            opts['ssh_key_is_encrypted'] = self.get(
+                ['ssh_key_is_encrypted'], default=False)
         self.opts = opts
 
     def __getattr__(self, name):
@@ -109,13 +116,18 @@ class Configuration(object):
     def dump(self):
         return json.dumps(self.opts, indent=2, separators=(',', ': '))
 
+
 DECRYPTED_SSH_KEY_PASS = ""
+
 
 def get_decrypted_ssh_key_pass():
     global DECRYPTED_SSH_KEY_PASS
     if not DECRYPTED_SSH_KEY_PASS:
-        DECRYPTED_SSH_KEY_PASS = boto3.client('kms').decrypt(CiphertextBlob=b64decode(os.environ['ssh_key_pass']))['Plaintext']
+        password = os.environ['ssh_key_pass']
+        DECRYPTED_SSH_KEY_PASS = boto3.client('kms').decrypt(
+            CiphertextBlob=b64decode(password))['Plaintext']
     return DECRYPTED_SSH_KEY_PASS
+
 
 def event_handler(event, context):
     config = Configuration('config.json')
@@ -123,15 +135,19 @@ def event_handler(event, context):
         logger.setLevel(logging.DEBUG)
     if config.ssh_enabled:
         ssh_tunnel = SSHTunnelForwarder(
-            (config.ssh_remote_host_public, config.ssh_remote_host_public_port),
+            (config.ssh_remote_host_public,
+             config.ssh_remote_host_public_port),
             ssh_username=config.ssh_username,
             ssh_pkey="./ssh.key",
-            ssh_private_key_password=get_decrypted_ssh_key_pass() if config.ssh_key_is_encrypted else os.environ['ssh_key_pass'],
-            remote_bind_address=(config.ssh_remote_host_private, config.ssh_remote_host_private_port),
+            ssh_private_key_password=(get_decrypted_ssh_key_pass()
+                                      if config.ssh_key_is_encrypted
+                                      else os.environ['ssh_key_pass']),
+            remote_bind_address=(config.ssh_remote_host_private,
+                                 config.ssh_remote_host_private_port),
             local_bind_address=('0.0.0.0', config.ssh_local_host_port)
         )
         ssh_tunnel.start()
-        
+
     ha = HomeAssistant(config)
     result = ha.post('alexa/smart_home', event, wait=True).json()
 
