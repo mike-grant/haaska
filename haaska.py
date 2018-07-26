@@ -135,14 +135,14 @@ def event_handler(event, context):
         logger.setLevel(logging.DEBUG)
     if config.ssh_enabled:
         ssh_tunnel = SSHTunnelForwarder(
-            (config.ssh_remote_host_public,
+            (config.ssh_remote_host_public_url,
              config.ssh_remote_host_public_port),
             ssh_username=config.ssh_username,
             ssh_pkey="./ssh.key",
             ssh_private_key_password=(get_decrypted_ssh_key_pass()
                                       if config.ssh_key_is_encrypted
                                       else os.environ['ssh_key_pass']),
-            remote_bind_address=(config.ssh_remote_host_private,
+            remote_bind_address=(config.ssh_remote_host_private_url,
                                  config.ssh_remote_host_private_port),
             local_bind_address=('0.0.0.0', config.ssh_local_host_port)
         )
