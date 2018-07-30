@@ -16,11 +16,8 @@ haaska.zip: haaska.py config/*
 	mkdir -p $(BUILD_DIR)
 	cp $^ $(BUILD_DIR)
 	pip install $(PIP_EXTRA) -t $(BUILD_DIR) requests
-	pip install $(PIP_EXTRA) -t $(BUILD_DIR) sshtunnel
 	chmod 755 $(BUILD_DIR)/haaska.py
-	if [ -e $(BUILD_DIR)/ssh.key ]; then chmod 755 $(BUILD_DIR)/ssh.key; fi
-	
-	cd $(BUILD_DIR); zip ../$@ -r .
+	cd $(BUILD_DIR); zip ../$@ -r *
 
 .PHONY: deploy
 deploy: haaska.zip
