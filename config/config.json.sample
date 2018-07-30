@@ -3,13 +3,5 @@
   "password": "",
   "debug": false,
   "ssl_verify": true,
-  "ssl_client": [],
-  "ssh_enabled": false,
-  "ssh_username": "homeassistant",
-  "ssh_remote_host_public_url": "",
-  "ssh_remote_host_public_port": 22,
-  "ssh_remote_host_private_url": "",
-  "ssh_remote_host_private_port": 8123,
-  "ssh_local_host_port": 8123,
-  "ssh_key_is_encrypted": false
+  "ssl_client": []
 }
