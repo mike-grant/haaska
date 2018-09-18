@@ -37,7 +37,8 @@ class HomeAssistant(object):
         agent_fmt = agent_str % (os.environ['AWS_DEFAULT_REGION'],
                                  requests.utils.default_user_agent())
         self.session = requests.Session()
-        self.session.headers = {'Authorization': f'Bearer {config.bearer_token}',
+        self.session.headers = {'Authorization':
+                                f'Bearer {config.bearer_token}',
                                 'content-type': 'application/json',
                                 'User-Agent': agent_fmt}
         self.session.verify = config.ssl_verify
