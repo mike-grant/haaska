@@ -1,5 +1,10 @@
 # haaska Changelog
 
+## [0.5] - 2018-09-18
+###
+- Breaking Change: Remove support for the legacy_auth provider in homeassistant
+- Implemented authentication using Long-Lived Access Tokens
+
 ## [0.4] - 2018-01-24
 ###
 - Changed code to work with Hass 0.62, please note this skill will break on any version older than this.
