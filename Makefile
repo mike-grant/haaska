@@ -21,7 +21,7 @@ endif
 haaska.zip: haaska.py config/*
 	mkdir -p $(BUILD_DIR)
 	cp $^ $(BUILD_DIR)
-	pip$(PIP_VER)e install $(PIP_EXTRA) -t $(BUILD_DIR) requests
+	pip$(PIP_VER) install $(PIP_EXTRA) -t $(BUILD_DIR) requests
 	chmod 755 $(BUILD_DIR)/haaska.py
 	cd $(BUILD_DIR); zip ../$@ -r *
 
