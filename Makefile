@@ -6,16 +6,22 @@ FUNCTION_NAME=haaska
 
 BUILD_DIR=build
 
+PIPVERSIONEQ9 := $(shell expr `pip3 -V | cut -d ' ' -f 2` \= 9.0.1)
+
 ifneq (,$(wildcard /etc/debian_version))
-        PIP_EXTRA = --system
+	ifeq "$(PIPVERSIONEQ9)" "1"
+		PIP_VER=3
+        	PIP_EXTRA = --system
+	endif
 else
-        PIP_EXTRA =
+        PIP_VER =
+	PIP_EXTRA =
 endif
 
 haaska.zip: haaska.py config/*
 	mkdir -p $(BUILD_DIR)
 	cp $^ $(BUILD_DIR)
-	pip install $(PIP_EXTRA) -t $(BUILD_DIR) requests
+	pip$(PIP_VER)e install $(PIP_EXTRA) -t $(BUILD_DIR) requests
 	chmod 755 $(BUILD_DIR)/haaska.py
 	cd $(BUILD_DIR); zip ../$@ -r *
 
