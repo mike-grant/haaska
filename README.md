@@ -1,15 +1,25 @@
-#### haaska: Home Assistant Alexa Skill Adapter
-
-
-## ATTENTION
-The instructions are in the process of being updated. Until then, you can refer to [The Wanderer](http://collingwood.me.uk/blog/index.php/hass-io-and-alexa/) for steps. **Note that these instructions include steps for Hass.io, which may not apply to you. Skip that section if needed.**
+# haaska: Home Assistant Alexa Skill Adapter
+[![Build Status](https://travis-ci.org/mike-grant/haaska.svg?branch=master)](https://travis-ci.org/mike-grant/haaska)
 
 ---
 
-haaska implements a bridge between a [Home Assistant](https://home-assistant.io) instance and the [Smart Home Skill API](https://developer.amazon.com/alexa/smart-home) for Amazon's Alexa. It provides voice control for a connected home managed by Home Assistant, through any Alexa-enabled device.
+haaska implements a bridge between the [Home Assistant Smart Home API](https://www.home-assistant.io/components/alexa/#smart-home) and the [Alexa Smart Home Skill API](https://developer.amazon.com/alexa/smart-home) from Amazon.
 
-For a list of available components that can be controlled [Home Assistant Docs](https://home-assistant.io/components/cloud.alexa/#available-domains)
+This provides voice control for a connected home managed by Home Assistant, through any Alexa-enabled device.
 
-(Thanks to [@bitglue](https://github.com/bitglue) for his work getting the smart home exposed via HTTP making this slimmed down version possible.)	
+### Getting Started
+To get started, head over to the [haaska Wiki](https://github.com/mike-grant/haaska/wiki).
 
-[![Build Status](https://travis-ci.org/mike-grant/haaska.svg?branch=master)](https://travis-ci.org/mike-grant/haaska)
+
+### Thanks and Acknowledgement
+
+Thanks to [@auchter](https://github.com/auchter) for creating the original haaska.
+
+Thanks to [@bitglue](https://github.com/bitglue) for his work in getting the Smart Home API exposed via HTTP, making this slimmed down version possible.
+
+This fork of haaska was created by [@mike-grant](https://github.com/mike-grant).
+
+Documentation and additional maintenance is done by [@anthonylavado](https://github.com/anthonylavado), and contributors like you.
+
+### License
+haaska is provided under the [MIT License](license.md).
