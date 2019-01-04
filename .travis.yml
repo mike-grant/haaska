@@ -2,6 +2,8 @@ language: python
 python:
   - "3.6"
 install:
-  - "pip install flake8"
+  - "pip install flake8 pytest"
+  - "pip install -r requirements.txt"
 script:
   - "flake8 haaska.py"
+  - "python -m pytest test.py"
