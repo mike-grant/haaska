@@ -1,4 +1,5 @@
 # haaska: Home Assistant Alexa Skill Adapter
+
 [![Build Status](https://travis-ci.org/mike-grant/haaska.svg?branch=master)](https://travis-ci.org/mike-grant/haaska)
 
 ---
@@ -10,6 +11,13 @@ This provides voice control for a connected home managed by Home Assistant, thro
 ### Getting Started
 To get started, head over to the [haaska Wiki](https://github.com/mike-grant/haaska/wiki).
 
+### Development
+
+Run tests
+
+```
+python -m pytest test.py
+```
 
 ### Thanks and Acknowledgement
 
@@ -22,4 +30,4 @@ This fork of haaska was created by [@mike-grant](https://github.com/mike-grant).
 Documentation and additional maintenance is done by [@anthonylavado](https://github.com/anthonylavado), and contributors like you.
 
 ### License
-haaska is provided under the [MIT License](license.md).
+haaska is provided under the [MIT License](LICENSE).
