@@ -34,7 +34,7 @@ def test_config_get(configuration):
 def test_config_get_url(configuration):
     test_urls = [
         "http://hass.example.com:8123",
-        "http://hass.example.app:8123"
+        "http://hass.example.app"
     ]
     for expected_url in test_urls:
         assert configuration.get_url(expected_url + "/") == expected_url
