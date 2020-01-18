@@ -99,7 +99,7 @@ class Configuration(object):
         if not url:
             raise ValueError('Property "url" is missing in config')
 
-        return url.rstrip("/api").rstrip("/")
+        return url.replace("/api", "").rstrip("/")
 
 
 def event_handler(event, context):

@@ -32,7 +32,11 @@ def test_config_get(configuration):
     assert configuration.get(["test"], default="default") == "default"
 
 def test_config_get_url(configuration):
-    expected = "http://hass.example.com:8123"
-    assert configuration.get_url("http://hass.example.com:8123/") == expected
-    assert configuration.get_url("http://hass.example.com:8123/api") == expected
-    assert configuration.get_url("http://hass.example.com:8123/api/") == expected
+    test_urls = [
+        "http://hass.example.com:8123",
+        "http://hass.example.app"
+    ]
+    for expected_url in test_urls:
+        assert configuration.get_url(expected_url + "/") == expected_url
+        assert configuration.get_url(expected_url + "/api") == expected_url
+        assert configuration.get_url(expected_url + "/api/") == expected_url
