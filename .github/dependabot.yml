@@ -1,0 +1,12 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+    timezone: Europe/London
+  open-pull-requests-limit: 99
+  ignore:
+  - dependency-name: pytest
+    versions:
+    - 6.2.2
