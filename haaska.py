@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python
 # coding: utf-8
 
 # Copyright (c) 2015 Michael Auchter <a@phire.org>
