@@ -32,7 +32,7 @@ def test_get_user_agent(home_assistant):
 
 
 def test_config_get(configuration):
-    assert configuration.get(["debug"])
+    assert configuration.get(["debug"]) is False
     assert configuration.get(["test"]) is None
     assert configuration.get(["test"], default="default") == "default"
 
