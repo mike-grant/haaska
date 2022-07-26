@@ -31,7 +31,7 @@ import requests
 logger = logging.getLogger()
 
 
-class Configuration(object):
+class Configuration:
     def __init__(self, filename: str = None, opts_dict: dict = None):
         self._json = {}
         if filename is not None:
@@ -62,7 +62,7 @@ class Configuration(object):
         return url.replace("/api", "").rstrip("/")
 
 
-class HomeAssistant(object):
+class HomeAssistant:
     def __init__(self, config: Configuration):
         self.config = config
 
