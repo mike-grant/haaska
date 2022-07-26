@@ -5,7 +5,7 @@ from haaska import HomeAssistant, Configuration
 
 
 @pytest.fixture
-def configuration():
+def configuration() -> Configuration:
     return Configuration(opts_dict={
         "url": "http://localhost:8123",
         "bearer_token": "",
@@ -16,28 +16,28 @@ def configuration():
 
 
 @pytest.fixture
-def home_assistant(configuration):
+def home_assistant(configuration: Configuration):
     return HomeAssistant(configuration)
 
 
-def test_ha_build_url(home_assistant):
+def test_ha_build_url(home_assistant: HomeAssistant):
     url = home_assistant.build_url("test")
     assert url == "http://localhost:8123/api/test"
 
 
-def test_get_user_agent(home_assistant):
+def test_get_user_agent():
     os.environ["AWS_DEFAULT_REGION"] = "test"
-    user_agent = home_assistant.get_user_agent()
+    user_agent = HomeAssistant.get_user_agent()
     assert user_agent.startswith("Home Assistant Alexa Smart Home Skill - test - python-requests/")
 
 
-def test_config_get(configuration):
+def test_config_get(configuration: Configuration):
     assert configuration.get(["debug"]) is False
     assert configuration.get(["test"]) is None
     assert configuration.get(["test"], default="default") == "default"
 
 
-def test_config_get_url(configuration):
+def test_config_get_url(configuration: Configuration):
     test_urls = [
         "http://hass.example.com:8123",
         "http://hass.example.app"
