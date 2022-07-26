@@ -1,6 +1,6 @@
 # haaska: Home Assistant Alexa Skill Adapter
 
-[![Build Status](https://travis-ci.org/mike-grant/haaska.svg?branch=master)](https://travis-ci.org/mike-grant/haaska)
+[![Main](https://github.com/mike-grant/haaska/actions/workflows/main.yml/badge.svg)](https://github.com/mike-grant/haaska/actions/workflows/main.yml)
 
 ---
 
