@@ -83,7 +83,10 @@ class HomeAssistant:
         r.raise_for_status()
         return r.json()
 
-    def post(self, endpoint: str, data: dict, wait: bool = False) -> Union[dict, None]:
+    def post(self,
+             endpoint: str,
+             data: dict,
+             wait: bool = False) -> Union[dict, None]:
         read_timeout = None if wait else 0.01
         try:
             logger.debug(f'calling {endpoint} with {data}')
