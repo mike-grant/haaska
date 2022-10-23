@@ -22,7 +22,7 @@ jobs:
       run: |
         pip install -r requirements-test.txt
     - name: Test
-      run: python -m pytest test.py
+      run: pytest test.py
   lint:
     runs-on: ubuntu-latest
     steps:
