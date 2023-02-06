@@ -15,8 +15,18 @@ To get started, head over to the [haaska Wiki](https://github.com/mike-grant/haa
 
 Run tests
 
-```
+```bash
 python -m pytest test.py
+```
+
+Deploy (updating existing function)
+```bash
+make deploy
+```
+
+Test discovery
+```bash
+make discover
 ```
 
 ### Thanks and Acknowledgement

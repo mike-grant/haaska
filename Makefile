@@ -56,6 +56,7 @@ DISCOVERY_PAYLOAD:='                                \
 discover:
 	@aws lambda invoke \
 		--function-name $(FUNCTION_NAME) \
+		--cli-binary-format raw-in-base64-out \
 		--payload ${DISCOVERY_PAYLOAD} \
 		/dev/fd/3 3>&1 >/dev/null | jq '.'
 
