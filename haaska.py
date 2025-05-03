@@ -40,7 +40,7 @@ class HomeAssistant(object):
             'User-Agent': self.get_user_agent()
         }
         self.session.verify = config.ssl_verify
-        self.session.cert = config.ssl_client
+        self.session.cert = tuple(config.ssl_client)
 
     def build_url(self, endpoint):
         return f'{self.config.url}/api/{endpoint}'
