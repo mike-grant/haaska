@@ -11,28 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.9', '3.8', '3.7']
+        python-version: ['3.13', '3.12', '3.11', '3.10']
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
     - name: Install dependencies
-      run: |
-        pip install -r requirements-test.txt
+      run: uv sync --locked --all-extras --dev
     - name: Test
-      run: python -m pytest test.py
+      run: uv run pytest test.py
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version-file: ".python-version"
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
     - name: Install dependencies
-      run: |
-        pip install -r requirements-test.txt
-    - name: Lint
-      run: flake8 haaska.py
+      run: uv sync --locked --all-extras --dev
+    - uses: pre-commit/action@v3.0.1
