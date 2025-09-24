@@ -21,7 +21,12 @@ endif
 haaska.zip: haaska.py config/*
 	mkdir -p $(BUILD_DIR)
 	cp $^ $(BUILD_DIR)
-	pip$(PIP_VER) install $(PIP_EXTRA) -t $(BUILD_DIR) requests
+	uv export --frozen --no-dev --no-editable -o uv-generated-requirements.txt
+	uv pip install \
+		--no-installer-metadata \
+		--no-compile-bytecode \
+		--target $(BUILD_DIR) \
+		-r uv-generated-requirements.txt
 	chmod 755 $(BUILD_DIR)/haaska.py
 	cd $(BUILD_DIR); zip ../$@ -r *
 
@@ -63,6 +68,7 @@ discover:
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR) haaska.zip
+	rm -f uv-generated-requirements.txt
 
 .PHONY: sample_config
 sample_config:

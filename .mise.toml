@@ -1,0 +1,11 @@
+[env]
+PROJECT_NAME = "{{ config_root | basename }}"
+_.python.venv = { path = ".venv", create = true }
+
+[tools]
+uv = "0.8.12"
+
+[tasks.install]
+description = "Install dependencies"
+alias = "i"
+run = "uv sync --locked --all-extras --dev"
