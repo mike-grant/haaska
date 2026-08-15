@@ -86,6 +86,13 @@ class Configuration(object):
         self.ssl_verify = self.get(['ssl_verify', 'ha_cert'], default=True)
         self.bearer_token = self.get(['bearer_token'], default='')
         self.ssl_client = self.get(['ssl_client'], default='')
+        if isinstance(self.ssl_client, list):
+            # JSON has no tuple type, so a (cert, key) pair always arrives as
+            # a list. requests>=2.32 requires a strict tuple to unpack it and
+            # treats an empty list as "cert provided", so both cases need
+            # normalizing here or urllib3 chokes hashing the pool key.
+            self.ssl_client = (
+                tuple(self.ssl_client) if self.ssl_client else None)
         self.debug = self.get(['debug'], default=False)
 
     def get(self, keys, default=None):
